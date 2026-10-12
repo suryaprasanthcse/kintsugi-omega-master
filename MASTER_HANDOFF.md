@@ -7,7 +7,7 @@
 | This repository | https://github.com/suryaprasanthcse/kintsugi-omega-master · local `C:\myspace\hacckathons\kintsugi-omega-master` |
 | Frozen submission | https://github.com/suryaprasanthcse/kintsugi-omega at `13a744b` (#neatHack). **Never** fetch into, commit to, push to, or add a remote for it. |
 | Base | `13a744b` "chore: license the repository under MIT", omega-ci run 38259678672 green on the frozen repo |
-| Status | Stages 1–8 built and verified. The autonomy window W did not run (NO-GO, 2026-10-12). Stages 9–12 not built. Stage 13 partially built. |
+| Status | Stages 1–8 built and verified. The autonomy window W did not run (NO-GO, 2026-10-12). **Updated 2026-10-13 (overnight run):** Stage 13a, Stage 9 and Stage 12 built and verified offline; Stage 10 and 11 offline modules built (A-69 … A-72, `docs/VERIFICATION.md`). Remaining: the Architect's items in §5, then 13b. |
 
 ## 1. Current state (inherited from `13a744b`)
 
@@ -15,7 +15,7 @@
 - **CI:** `.github/workflows` run lint · typecheck · test and one G7 job per host (ledger, scout, triage). The only secret they read is `HOLDOUT_AGE_IDENTITY`.
 - **Stages 1–8** (`docs/EXECUTION_PLAN.md`, results in `docs/VERIFICATION.md`): proof cores, the Entire and entire-graph layer, the fleet (Ledger, Scout, Triage), senses (neatlogs receptors, ingress, poller), the Temporal control plane, crew and gates G0–G7, antibodies with the canary and L3 quarantine, and the proof plane (`kintsugi audit` C1–C14 with a 33-test mutation suite, `BranchLedger` with signed `anchor-*` tags, the Saboteur, `kintsugi t0 check`, `kintsugi t0 genesis`).
 - **Rehearsal evidence:** `evidence/rehearsals/l3-20261012-074523.json` and `antibodies/AB-1` (AB-1@1.1 ACTIVE). Primary repair $0.665, vaccinations $0.089 and $0.104, backfill $12.00, disclosed L3 drill (frozen repo PRs #7–#10). Rehearsal branches `rehearsal/*` are carried over as history.
-- **Amendments:** A-1 … A-68 in `docs/EXECUTION_PLAN.md`. The next one is **A-69**.
+- **Amendments:** A-1 … A-68 in `docs/EXECUTION_PLAN.md` at the base; this edition adds A-69 … A-72. The next one is **A-73**.
 - **Not carried over:** `.env`, `.state/` and every key file stay outside git. No `ledger` branch and no `anchor-*` tags exist (no T0 ever happened). The frozen repo's GitHub rulesets, issues and PRs do not exist here.
 
 ## 2. Isolation rules for this edition
@@ -81,6 +81,22 @@ Recommended order: **13a** (runtime wiring) → **9** → **12** → **10** → 
 1. A compressed L0–L5 + self-repair dress rehearsal; `kintsugi audit --all` green on it.
 2. `kintsugi t0 check` until only confirmations remain, in this order: T0 attestation key (`kintsugi keys generate`, private key outside the repo), commit `.kintsugi/attest.pub` and post its fingerprint; re-seal the holdout to a new Architect-held identity, push, then rotate `HOLDOUT_AGE_IDENTITY`; create the ruleset on `main` after the last direct push; seal S-17/18/19; `kintsugi t0 genesis --ruleset <id>`, commit the window record (the T0 commit), push `ledger`; runtime, background chaos, tunnel (`cloudflared`) and `kintsugi senses provision --public-url`.
 3. W: no build session writes to the repository; the Architect posts the hourly anchor text; after W, set `t1`, publish the reveals and bundles, run `kintsugi audit --all` and `make judge`.
+
+### State after the 2026-10-13 overnight run
+
+- **Built:** `kintsugi/crew/{runtime,upstream,w_rehearsal}.py`, `scripts/w-runtime.sh`,
+  `scripts/keep-awake.ps1` (13a); `kintsugi/econ/{actuals,cortex,cfo_sync}.py`, the Wright refit,
+  `kintsugi/crew/{treatment,l5_rehearsal}.py`, `business/` and `kintsugi econ` (9);
+  `self_repair` enforcement, `hosts/omega`, `kintsugi/crew/self_repair_rehearsal.py` (12);
+  `kintsugi/onboard/`, the Clinic issue form, `kintsugi/arena_api.py` (10, 11 offline).
+- **Evidence:** `evidence/rehearsals/{w-20261012-193427,l5-20261012-200248,self-20261012-202518}.json`.
+- **Tests:** 901 passed, 30 skipped on `37e0be7`, plus 43 Wave D tests; omega-ci green from
+  `37e0be7` on (red on `01f9f5a` and `37304be`, fixed there).
+- **Waiting on the Architect:** S-17/18/19 (compose and seal outside any Entire-tracked session;
+  A-69); the Temporal CLI in WSL; this edition's neatlogs project and `.env` (C10, receptors,
+  the ingress); cfo.ai/Ari access; the cash and fixed costs in `business/plan.json`; the OSS-1
+  choice; the Arena board; then the 13b dress rehearsal, which also records more replay
+  incidents (4 of 20 today).
 
 ## 5. Open issues carried over
 

@@ -13,6 +13,52 @@ evidence that reproduces it. Numbers are copied from committed artifacts or from
 | A harmful vaccination was caught by the canary and auto-reverted through an attested notary session (PRs #8–#10, a **disclosed drill**) | Stage 7 |
 | `kintsugi audit` C1–C14 catches tampering of every kind it checks | Stage 8, 33 mutation tests |
 | The autonomous window W was **not run**; Stages 9–12 are **descoped** | Architect's go/no-go, 2026-10-12; README "Disclosure" |
+| Master Edition (after the submission): Stages 13a, 9 and 12 and offline Stage 10/11 modules built and verified offline | "Master Edition overnight run" below |
+
+## Master Edition overnight run (2026-10-13): Stages 13a, 9, 12, offline 10/11
+
+Recorded 2026-10-13 00:20–02:40 IST on Windows 11 (Entire 0.11.4, entire-graph v0.4.0) in an
+unattended session the Architect authorised. Amendments A-69 … A-72. No headless model session
+ran (the headless CLI is not logged in on this machine, and every rehearsal is offline by
+design); no `.env` exists in this clone, so nothing reached neatlogs, cfo.ai or a foreign
+repository. Every commit carries one verified `Entire-Checkpoint` whose `files_touched` covers
+it.
+
+| Target | Result | Evidence |
+|---|---|---|
+| 13a W crew factory | ✅ `kintsugi.crew.runtime:crew` builds the crew on the `ledger` branch from the window's genesis; refuses a missing or closed window, a ledger without genesis, keys inside a git worktree and a T0 key that is not `attest_pubkey`; anchors push ledger and tags fast-forward; the Watchdog passes `KINTSUGI_RUNTIME` to its pools | `tests/crew/test_runtime.py`, `tests/control/test_service.py` |
+| 13a deliver / publish ports | ✅ notary commit in a worktree off the fetched base → `upstream/<host>-<minute>` → PR → merge commit only on green CI; red or silent CI never merges | `tests/crew/test_upstream.py` |
+| 13a WSL launcher | ✅ valid bash; every `kintsugi …` command it runs parses; installs nothing | `tests/test_scripts.py` |
+| 13a end-to-end rehearsal | ✅ (offline) genesis → sealed practice spec → upstream-lane delivery → anchor → t1 + reveal: audit **C1 PASS** (3 entries, 1 anchor), **C6 PASS** (1/1, 0 honeytoken hits); C2–C5, C7–C10, C12, C13 need real sessions, GitHub, neatlogs or a holdout → 13b | `evidence/rehearsals/w-20261012-193427.json`, `tests/crew/test_w_rehearsal.py` |
+| 9 plan hash pinned per incident | ✅ `business_plan_sha` in every incident plan | `tests/econ/test_cortex.py` |
+| 9 actuals | ✅ 4 recorded rehearsal spends with sources; case-file cost preferred ($0.665376); rehearsals never enter `spent_mtd` | `business/actuals.json`, `tests/econ/test_actuals.py` |
+| 9 governor never lowers power below 0.8 | ✅ n stays Connor's full-power n (221 pairs at r_fail 0.05); "repair with lower n" is always rejected; the incident escalates | `evidence/rehearsals/l5-20261012-200248.json` |
+| 9 L5 rehearsal on Triage | ✅ (offline) measured 9/180 (5.0%) → B $2.25, T1 $3.18 → **escalate**; spec §6.8 inputs (disclosed) → B $4.83, T1 $2.34 → **treat and escalate**; T1 applied through the Treater; the same live traffic then fails **5/180** | same file, `tests/crew/test_l5.py` |
+| 9 cfo.ai tabs | ✅ as files (Ari MCP, A8, not wired): unit economics, scenarios, runway (waits on the Architect's cash), plan vs actual, Wright refit (b = 2.30 over 4 points, wide intervals) | `business/cfo_export/`, `tests/econ/test_cfo_sync.py` |
+| 9 C10 within 1% against the new neatlogs project | ⏳ needs this edition's neatlogs project and `.env` | — |
+| 12 self_repair scope | ✅ enforced at the Surgeon's commit, the diff check, the cards and treatments; refused for each of `kintsugi/proof`, `stats`, `gates`, `sandbox/proc.py`, `schemas`, `.kintsugi`, workflows, the plan; C14 fails any such self-repair | `tests/gates/test_self_repair.py` |
+| 12 replay suite and grader | ✅ `hosts/omega`: **4 recorded incidents of 20** (none invented), hit@3 / cost / p95 | `tests/omega/test_replay_suite.py` |
+| 12 self-repair rehearsal | ✅ (offline, prepared patch disclosed) hit@3 **0.25 → 0.75**, C14 PASS 1/1, an audit edit refused at commit; main unchanged | `evidence/rehearsals/self-20261012-202518.json`, `tests/crew/test_self_repair_rehearsal.py` |
+| 10 onboarding (offline) | ✅ consent-gated intake, health card, replay mode = live path, seed evals, baseline, immune scan, PR-only terms | `tests/onboard/test_onboard.py` |
+| 11 Arena API (offline) | ✅ 33-payload injection fuzz corpus refused; environment classes only; sealed on arrival; 1/client/10 min; daily cap | `tests/test_arena_api.py` |
+| Full suite | ✅ **901 passed, 30 skipped** on `37e0be7` (before the Wave D tests, which add 43) | `uv run pytest -q`, 2026-10-13 |
+
+### Defects found while building, all fixed
+
+- The Watchdog's subprocess gateway would have dropped `KINTSUGI_RUNTIME` from its pools.
+- The test helper's fake notary missed files inside new directories (`git status -uall`).
+- The offline notary stand-in stripped the first `git status` line's leading space and lost a
+  path; caught by the rehearsal's own commit refusal (A-16).
+- Adding `hosts/omega` broke `t0 check`'s baseline count: omega-ci red on `01f9f5a` and
+  `37304be`, fixed in `37e0be7`.
+
+### Known limits carried forward
+
+- S-17/18/19 are not composed or sealed (A-69 (5)); the Temporal CLI in WSL is not installed.
+- The replay suite has 4 of 20 incidents; Triage's root cause is still missed after the
+  self-repair (hit@3 0.75).
+- cfo.ai Ari MCP, live C10, OSS-1, the Arena board and its model compiler, chaos-proxy
+  deliveries: not built (A-70, A-72).
 
 ## Stage 8 — Proof plane: audit C1–C14, ledger branch and anchors, Saboteur, T0 preflight
 
