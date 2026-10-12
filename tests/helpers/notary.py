@@ -29,8 +29,8 @@ class FakeNotarySession:
         proc.run(["git", "-C", str(cwd), "apply", "--whitespace=nowarn", handle.name],
                  timeout_s=60, check=True)  # fmt: skip
         Path(handle.name).unlink(missing_ok=True)
-        changed = proc.run(["git", "-C", str(cwd), "status", "--porcelain"], timeout_s=60,
-                           check=True).stdout.split("\n")  # fmt: skip
+        changed = proc.run(["git", "-C", str(cwd), "status", "--porcelain", "-uall"],
+                           timeout_s=60, check=True).stdout.split("\n")  # fmt: skip
         paths = [line[3:].strip() for line in changed if line.strip()]
         if self.tamper and paths:
             target = cwd / paths[0]
