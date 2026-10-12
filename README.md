@@ -2,6 +2,12 @@
 
 > Repairs that show their seams in gold.
 
+**Master Edition.** This repository continues KINTSUGI-Ω beyond the hackathon (Stages 9–13). The
+#neatHack submission is frozen at
+[suryaprasanthcse/kintsugi-omega@13a744b](https://github.com/suryaprasanthcse/kintsugi-omega/tree/13a744b)
+and is never modified; everything below describes that submitted state until this edition's own
+stages land. The plan is in [MASTER_HANDOFF.md](MASTER_HANDOFF.md).
+
 KINTSUGI-Ω is our #neatHack 2026 entry: an autonomous reliability system for a fleet of AI
 agents, modelled on the adaptive immune system. It senses failures with
 [neatlogs](https://neatlogs.com), remembers and proves every change with
@@ -102,14 +108,15 @@ is in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 ## Architect & AI Tooling Disclosure
 
-Surya Prasanth R ([@suryaprasanthcse](https://github.com/suryaprasanthcse)) is the sole human architect and contributor to this repository.
+Surya Prasanth R ([@suryaprasanthcse](https://github.com/suryaprasanthcse)) is the sole human architect and the sole contributor to this repository. Every commit is authored by him; no commit carries a `Co-authored-by:` trailer.
 
-KINTSUGI-Ω is built and operated with AI tooling, disclosed here for #neatHack:
+KINTSUGI-Ω is built and operated with AI tooling, disclosed here:
 
-- **Claude Code** writes and changes code under the architect's direction, and runs the headless agent crew.
-- **neatlogs** traces the agent fleet and detects failures.
-- **Entire** (with the `entire-graph` plugin) records every AI session as a checkpoint and maps the code graph.
-- **cfo.ai** models the unit economics and the business plan.
+- **Gideon (Google Gemini)**: strategic systems architecture, cryptographic audit design and operational direction, in conversation with the architect. Gideon writes no code and makes no commits.
+- **Claude Code**: implementation under the architect's direction, and execution of the headless agent crew (Surgeons, Auditor, Immunologist, notary sessions).
+- **neatlogs** ([@neatlogs](https://x.com/neatlogs)): traces the agent fleet and detects failures.
+- **Entire** ([@EntireHQ](https://x.com/EntireHQ), with the `entire-graph` plugin): records every AI session as a checkpoint and maps the code graph.
+- **cfo.ai** ([@arithecfo](https://x.com/arithecfo)): models the unit economics and the business plan.
 
 Licensed under the [MIT License](LICENSE).
 
