@@ -27,8 +27,9 @@ build/
 # Node
 node_modules/
 
-# Allow the business-plan actuals export (spec §4.6.5)
+# Allow the business-plan actuals export (spec §4.6.5) and the cfo.ai tabs (Stage 9)
 !business/actuals.csv
+!business/cfo_export/*.csv
 
 # Re-assert after the exception: secrets stay ignored everywhere, business/ included
 *accessKeys*

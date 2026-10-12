@@ -1,0 +1,4 @@
+host,tier,price_usd_month,c_mon_usd_month,c_primary_usd,primary_n,c_secondary_usd,secondary_n,cost_phase,coverage_q,expected_incident_cost_usd,incidents_month,incident_cost_month_usd,cogs_month_usd,gross_margin_pct,gm_floor_pct,meets_floor
+ledger,Team,299.0000,30.0000,1.2246,2,0.0967,2,all,0.500,0.6607,4,2.6427,32.6427,89.1,70.0,yes
+scout,Team,299.0000,30.0000,1.2246,2,0.0967,2,all,0.500,0.6607,4,2.6427,32.6427,89.1,70.0,yes
+triage,Pilot,99.0000,6.0000,1.2246,2,0.0967,2,all,0.500,0.6607,3,1.9820,7.9820,91.9,70.0,yes

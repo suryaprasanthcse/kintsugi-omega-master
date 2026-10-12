@@ -1,0 +1,4 @@
+month,host,planned_c_mon_usd,actual_operating_usd,planned_repair_pool_usd,actual_repair_spend_usd,rehearsal_spend_usd
+2026-10,ledger,30.0000,0.0000,59.7000,0.0000,0.0000
+2026-10,scout,30.0000,0.0000,59.7000,0.0000,0.1044
+2026-10,triage,6.0000,0.0000,23.7000,0.0000,0.0000

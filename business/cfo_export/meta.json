@@ -1,0 +1,11 @@
+{
+ "business_plan_sha": "bf1d028e87fb3835cd7bee8a5d5611b3553e61a375b03cb89bf016b10cb6f757",
+ "cost_phase": "all (rehearsal only)",
+ "observed_coverage_q": 0.5,
+ "unit_costs": {
+  "primary_mean_usd": 1.224589,
+  "primary_n": 2,
+  "secondary_mean_usd": 0.096738,
+  "secondary_n": 2
+ }
+}

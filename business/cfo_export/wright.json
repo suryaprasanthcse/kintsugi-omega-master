@@ -1,0 +1,45 @@
+{
+ "b": 2.297533,
+ "c1": 2.011336,
+ "ci_bootstrap": [
+  -0.553669,
+  4.960117
+ ],
+ "ci_ols": [
+  -0.066139,
+  4.661206
+ ],
+ "learning_rate": 0.796589,
+ "n_points": 4,
+ "phases": [
+  "rehearsal"
+ ],
+ "points": [
+  {
+   "cost_usd": 1.783803,
+   "n": 1
+  },
+  {
+   "cost_usd": 0.665376,
+   "n": 2
+  },
+  {
+   "cost_usd": 0.08905,
+   "n": 3
+  },
+  {
+   "cost_usd": 0.104426,
+   "n": 4
+  }
+ ],
+ "progress_ratio": 0.203411,
+ "r2": 0.89739,
+ "refs": [
+  "INC-REH-0001",
+  "INC-R235459-0001",
+  "VAC-AB-1-crm-practice",
+  "VAC-AB-1-scout"
+ ],
+ "se_b": 0.549352,
+ "status": "fitted"
+}

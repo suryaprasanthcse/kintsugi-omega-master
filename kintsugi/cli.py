@@ -161,6 +161,14 @@ def _build_parser() -> argparse.ArgumentParser:
     g7.add_argument("--holdout-identity", type=Path, default=None)
     g7.add_argument("--out", type=Path, default=None, help="write the JSON summary here")
 
+    econ = sub.add_parser("econ", help="the economic cortex: actuals, refit, cfo.ai (§4.6, L5)")
+    econ_sub = econ.add_subparsers(dest="econ_command", required=True)
+    actuals = econ_sub.add_parser("actuals", help="collect spend lines from evidence and state")
+    actuals.add_argument("--write", action="store_true", help="update business/actuals.*")
+    econ_sub.add_parser("refit", help="the nightly Wright learning-curve refit (prints JSON)")
+    cfo = econ_sub.add_parser("cfo-export", help="the cfo.ai tabs as files (Ari MCP: A8)")
+    cfo.add_argument("--out", type=Path, default=None, help="default business/cfo_export")
+
     keys = sub.add_parser("keys", help="attestation key custody (spec §4.5.1)")
     keys_sub = keys.add_subparsers(dest="keys_command", required=True)
     generate = keys_sub.add_parser(
@@ -452,6 +460,30 @@ def _fleet_up(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _econ(args: argparse.Namespace) -> int:
+    import json
+
+    from kintsugi.econ import cfo_sync
+    from kintsugi.econ.actuals import Actuals, collect
+
+    repo = _repo()
+    stored = repo / "business" / "actuals.json"
+    if args.econ_command == "actuals":
+        found = collect(repo)
+        if args.write:
+            stored.write_text(found.to_json(), encoding="utf-8", newline="\n")
+            stored.with_suffix(".csv").write_text(found.to_csv(), encoding="utf-8", newline="\n")
+        print(json.dumps({"spends": len(found.spends), "rehearsal": found.unit_costs(
+            phase="rehearsal"), "live": found.unit_costs(phase="live")}, indent=1))  # fmt: skip
+        return EXIT_OK
+    if args.econ_command == "refit":
+        print(json.dumps(cfo_sync.learning_curve(Actuals.load(stored)), indent=1))
+        return EXIT_OK
+    for path in cfo_sync.write_export(repo, Actuals.load(stored), args.out):
+        print(f"wrote {path}")
+    return EXIT_OK
+
+
 def _fleet_down() -> int:
     from kintsugi.fleet.runtime import STOP_FILE
 
@@ -624,6 +656,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _fleet_up(args) if args.fleet_command == "up" else _fleet_down()
     if args.command == "audit":
         return _audit(args)
+    if args.command == "econ":
+        return _econ(args)
     if args.command == "t0":
         return _t0_check(args)
 

@@ -12,7 +12,9 @@ Q(m) = H_{m,s} / H_{K,s} of incidents, where H_{m,s} = Σ_{k=1..m} k^(−s).
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -100,6 +102,23 @@ def fit(
         r2=r2,
         n_points=int(n.size),
     )
+
+
+def refit(costs: Sequence[float], *, seed: int = 0) -> dict[str, Any]:
+    """The nightly refit (Stage 9): the learning curve over every incident's cost, in the order
+    the incidents happened (n = 1, 2, …). Fewer than three points cannot be fitted honestly."""
+    points = [{"n": i + 1, "cost_usd": round(float(c), 6)} for i, c in enumerate(costs)]
+    if len(points) < 3:
+        return {"status": "insufficient", "n_points": len(points), "points": points}
+    found = fit([p["n"] for p in points], [p["cost_usd"] for p in points], seed=seed)
+    return {
+        "status": "fitted", "n_points": found.n_points, "points": points,
+        "b": round(found.b, 6), "c1": round(found.c1, 6), "se_b": round(found.se_b, 6),
+        "ci_ols": [round(v, 6) for v in found.ci_ols],
+        "ci_bootstrap": [round(v, 6) for v in found.ci_bootstrap],
+        "r2": round(found.r2, 6), "progress_ratio": round(found.progress_ratio, 6),
+        "learning_rate": round(found.learning_rate, 6),
+    }  # fmt: skip
 
 
 def zipf_coverage(m: int, k_classes: int, s: float) -> float:
