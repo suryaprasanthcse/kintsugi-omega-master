@@ -1,0 +1,290 @@
+{
+ "after": {
+  "grades": [
+   {
+    "cost_usd": 0.0,
+    "hit_at_3": true,
+    "id": "INC-R235459-0001",
+    "method": "entire-graph",
+    "rank": 2,
+    "seconds": 0.703,
+    "suspects": [
+     {
+      "end": 30,
+      "file": "practice_ledger/tools.py",
+      "start": 23,
+      "symbol": "fx_rate"
+     },
+     {
+      "end": 78,
+      "file": "practice_ledger/reconcile.py",
+      "start": 73,
+      "symbol": "book_pending_lines"
+     },
+     {
+      "end": 20,
+      "file": "practice_ledger/retry.py",
+      "start": 16,
+      "symbol": "retry_with_backoff"
+     }
+    ]
+   },
+   {
+    "cost_usd": 0.0,
+    "hit_at_3": true,
+    "id": "VAC-AB-1-crm-practice",
+    "method": "entire-graph",
+    "rank": 1,
+    "seconds": 0.703,
+    "suspects": [
+     {
+      "end": 72,
+      "file": "practice_crm/sync.py",
+      "start": 63,
+      "symbol": "sync_contacts"
+     },
+     {
+      "end": 37,
+      "file": "practice_crm/tools.py",
+      "start": 33,
+      "symbol": "create_contact"
+     },
+     {
+      "end": 60,
+      "file": "practice_crm/sync.py",
+      "start": 55,
+      "symbol": "SyncSession.push"
+     }
+    ]
+   },
+   {
+    "cost_usd": 0.0,
+    "hit_at_3": true,
+    "id": "VAC-AB-1-scout",
+    "method": "entire-graph",
+    "rank": 3,
+    "seconds": 0.735,
+    "suspects": [
+     {
+      "end": 56,
+      "file": "scout/research.py",
+      "start": 50,
+      "symbol": "fetch_document"
+     },
+     {
+      "end": 26,
+      "file": "scout/util/retry.py",
+      "start": 15,
+      "symbol": "retry_with_backoff"
+     },
+     {
+      "end": 70,
+      "file": "scout/research.py",
+      "start": 59,
+      "symbol": "fetch_all_pages"
+     }
+    ]
+   },
+   {
+    "cost_usd": 0.0,
+    "hit_at_3": false,
+    "id": "INC-L5MEASURED-0001",
+    "method": "entire-graph",
+    "rank": null,
+    "seconds": 0.781,
+    "suspects": [
+     {
+      "end": 123,
+      "file": "triage/tools.py",
+      "start": 122,
+      "symbol": "_issue_text"
+     },
+     {
+      "end": 27,
+      "file": "triage/services/mock_github.py",
+      "start": 26,
+      "symbol": "_issue"
+     },
+     {
+      "end": 133,
+      "file": "triage/tools.py",
+      "start": 127,
+      "symbol": "classify_type"
+     }
+    ]
+   }
+  ],
+  "recorded_cases": 4,
+  "summary": {
+   "cases": 4,
+   "hit_at_3": 0.75,
+   "hits": 3,
+   "mean_cost_usd": 0.0,
+   "methods": [
+    "entire-graph"
+   ],
+   "p95_seconds": 0.781
+  },
+  "target_cases": 20
+ },
+ "before": {
+  "grades": [
+   {
+    "cost_usd": 0.0,
+    "hit_at_3": false,
+    "id": "INC-R235459-0001",
+    "method": "entire-graph",
+    "rank": null,
+    "seconds": 0.687,
+    "suspects": [
+     {
+      "end": 30,
+      "file": "practice_ledger/tools.py",
+      "start": 23,
+      "symbol": "fx_rate"
+     },
+     {
+      "end": 12,
+      "file": "practice_ledger/retry.py",
+      "start": 9,
+      "symbol": "RateLimited"
+     },
+     {
+      "end": 6,
+      "file": "practice_ledger/reconcile.py",
+      "start": 2,
+      "symbol": null
+     }
+    ]
+   },
+   {
+    "cost_usd": 0.0,
+    "hit_at_3": true,
+    "id": "VAC-AB-1-crm-practice",
+    "method": "entire-graph",
+    "rank": 2,
+    "seconds": 0.672,
+    "suspects": [
+     {
+      "end": 27,
+      "file": "practice_crm/graders/grader.py",
+      "start": 9,
+      "symbol": "grade"
+     },
+     {
+      "end": 72,
+      "file": "practice_crm/sync.py",
+      "start": 63,
+      "symbol": "sync_contacts"
+     },
+     {
+      "end": 37,
+      "file": "practice_crm/tools.py",
+      "start": 33,
+      "symbol": "create_contact"
+     }
+    ]
+   },
+   {
+    "cost_usd": 0.0,
+    "hit_at_3": false,
+    "id": "VAC-AB-1-scout",
+    "method": "entire-graph",
+    "rank": null,
+    "seconds": 0.719,
+    "suspects": [
+     {
+      "end": 12,
+      "file": "scout/util/retry.py",
+      "start": 9,
+      "symbol": "RateLimited"
+     },
+     {
+      "end": 56,
+      "file": "scout/research.py",
+      "start": 50,
+      "symbol": "fetch_document"
+     },
+     {
+      "end": 6,
+      "file": "scout/__init__.py",
+      "start": 2,
+      "symbol": null
+     }
+    ]
+   },
+   {
+    "cost_usd": 0.0,
+    "hit_at_3": false,
+    "id": "INC-L5MEASURED-0001",
+    "method": "entire-graph",
+    "rank": null,
+    "seconds": 0.734,
+    "suspects": [
+     {
+      "end": 123,
+      "file": "triage/tools.py",
+      "start": 122,
+      "symbol": "_issue_text"
+     },
+     {
+      "end": 88,
+      "file": "triage/evals/offline_model.py",
+      "start": 85,
+      "symbol": "_issue_block"
+     },
+     {
+      "end": 87,
+      "file": "triage/snapshot.py",
+      "start": 75,
+      "symbol": "Issue"
+     }
+    ]
+   }
+  ],
+  "recorded_cases": 4,
+  "summary": {
+   "cases": 4,
+   "hit_at_3": 0.25,
+   "hits": 1,
+   "mean_cost_usd": 0.0,
+   "methods": [
+    "entire-graph"
+   ],
+   "p95_seconds": 0.734
+  },
+  "target_cases": 20
+ },
+ "c14": {
+  "check": "C14",
+  "problems": [],
+  "status": "PASS",
+  "summary": "1/1",
+  "title": "self-repair scope"
+ },
+ "commit": {
+  "merge_sha": "337b0dba8d2ccc3b4759d8be2b0bf6d0763b6ab0",
+  "paths": [
+   "kintsugi/crew/archivist.py"
+  ],
+  "role": [
+   "self-repair/H1"
+  ],
+  "sha": "6c249342859b7041fc5564ad9ad8ff0f5e3a9d3e"
+ },
+ "disclosed": [
+  "the self-repair patch is prepared for the rehearsal (A-66 style), applied by an offline stand-in session (no Entire checkpoint)",
+  "scratch clone; this repository's main is unchanged"
+ ],
+ "duration_s": 14.6,
+ "forbidden_attempt": {
+  "path": "kintsugi/proof/audit.py",
+  "reason": "protected paths touched: [('kintsugi/proof/audit.py', 'kintsugi/proof/**')]",
+  "refused": true
+ },
+ "incident": "INC-SELF-01",
+ "kind": "self-repair-rehearsal",
+ "model": "none (localisation only)",
+ "phase": "rehearsal",
+ "run": "self-20261012-202518"
+}

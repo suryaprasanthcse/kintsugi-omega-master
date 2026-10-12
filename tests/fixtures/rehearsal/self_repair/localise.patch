@@ -1,0 +1,31 @@
+--- a/kintsugi/crew/archivist.py
++++ b/kintsugi/crew/archivist.py
+@@ -133,10 +133,27 @@ def localise(
+         found = {"results": recent_regions(checkout)}
+         context = "(entire graph unavailable: regions changed by recent commits)"
+         method = "git-recent"
+-    regions = [r for r in found.get("results") or [] if not _is_test(str(r.get("file_path", "")))]
++    results = list(found.get("results") or [])
++    regions = rank_repairable(results) if method == "entire-graph" else [
++        r for r in results if not _is_test(str(r.get("file_path", "")))]
+     return regions, context, method
+
+
++def rank_repairable(results: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
++    """Suspects a Surgeon could change: Python code with a symbol, outside tests and the
++    surgeon-protected paths (evals, graders, holdout), functions and methods ahead of class
++    declarations; the search order is kept within each group."""
++    from kintsugi.gates.protected_paths import load_policy
++
++    policy = load_policy()
++    keep = [dict(r) for r in results
++            if str(r.get("file_path", "")).endswith(".py")
++            and not _is_test(str(r.get("file_path", "")))
++            and (r.get("qualified_name") or r.get("symbol_name"))
++            and not policy.violations([str(r["file_path"]).replace("\\", "/")], ["surgeon"])]
++    return sorted(keep, key=lambda r: 0 if r.get("kind") in ("function", "method") else 1)
++
++
+ def blame(repo: Path, path: str, start: int, end: int) -> list[BlameLine]:
+     out = _git(repo, "blame", "--porcelain", "-L", f"{start},{end}", "HEAD", "--", path)
+     lines: list[BlameLine] = []
