@@ -40,6 +40,7 @@ from kintsugi.crew.notary import Notary, NotaryRequest
 from kintsugi.crew.pathologist import Pathologist
 from kintsugi.crew.saboteur import SabotageRefused, Saboteur
 from kintsugi.crew.sentinel import Sentinel
+from kintsugi.econ.cortex import Cortex
 from kintsugi.gates import canary
 from kintsugi.gates.checkout import rev
 from kintsugi.memory.antibody import Antibody, AntibodyState
@@ -149,6 +150,7 @@ class OmegaCrew:
         immunity: Immunity | None = None,  # None: Stage 6 behaviour (primary responses only)
         anchoring: Anchoring | None = None,
         sabotage: SabotageLane | None = None,
+        cortex: Cortex | None = None,  # Stage 9: business plan + live actuals behind budgets
     ) -> None:
         self.ctx = ctx
         self.runner = runner
@@ -162,7 +164,7 @@ class OmegaCrew:
         self.anchoring = anchoring
         self.sabotage = sabotage
         self.auditor = Auditor(ctx)
-        self.coordinator = Coordinator(ctx)
+        self.coordinator = Coordinator(ctx, cortex=cortex)
         if immunity is not None and immunity.immunologist.ledger is None:
             immunity.immunologist.ledger = self.ledger
 
@@ -236,7 +238,16 @@ class OmegaCrew:
     # ---- planning and decisions -----------------------------------------------------------------
 
     def do_plan_budget(self, step: StepContext, sig: c.Signature, cause: c.Cause) -> Any:
-        return self.coordinator.plan_budget(sig, cause)
+        plan = self.coordinator.plan_budget(sig, cause)
+        economics = self.ctx.case(sig.incident_id).reader("governor").get(
+            "plan", "economics", None)  # fmt: skip
+        if economics is not None:  # L5: the decision span, every alternative and its cost
+            mine = [e for e in self.ledger.entries() if e.get("type") == "economics"
+                    and e.get("incident") == sig.incident_id]  # fmt: skip
+            if not mine:  # a retried step records it once
+                self.ledger.append({"type": "economics", "incident": sig.incident_id,
+                                    "host": sig.host, **economics})  # fmt: skip
+        return plan
 
     def do_hypothesize(self, step: StepContext, *args: Any) -> list[c.Card]:
         sig, cause, plan, rnd, history, prior = args

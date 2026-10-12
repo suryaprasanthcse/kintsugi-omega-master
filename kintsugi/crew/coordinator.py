@@ -30,6 +30,7 @@ from kintsugi.crew.consult import consult
 from kintsugi.crew.context import CrewContext
 from kintsugi.crew.manifest import ContextBuilder
 from kintsugi.econ import governor
+from kintsugi.econ.cortex import Cortex, LiveInputs, decision_record
 from kintsugi.gates.checkout import clean_checkout, rev
 from kintsugi.gates.evals import run_tasks
 from kintsugi.gates.protected_paths import load_policy
@@ -132,9 +133,12 @@ def pareto_front(candidates: Sequence[Mapping[str, Any]]) -> list[Mapping[str, A
 
 
 class Coordinator:
-    def __init__(self, ctx: CrewContext, inputs: PlanInputs | None = None) -> None:
+    def __init__(
+        self, ctx: CrewContext, inputs: PlanInputs | None = None, cortex: Cortex | None = None
+    ) -> None:
         self.ctx = ctx
         self.inputs = inputs or PlanInputs()
+        self.cortex = cortex  # Stage 9: the business plan and live actuals replace ``inputs``
 
     # ---- governor ------------------------------------------------------------------------------
 
@@ -143,7 +147,9 @@ class Coordinator:
         econ = target.host.economics
         case = self.ctx.case(sig.incident_id)
         opened = case.reader("governor").get("incident_open", "open", None) or {}
-        p = self.inputs
+        p: PlanInputs | LiveInputs = self.inputs
+        if self.cortex is not None:
+            p = self.cortex.inputs(sig.host)
         r_fail = 0.18
         if opened.get("var_estimate"):
             r_fail = min(
@@ -171,6 +177,13 @@ class Coordinator:
             [k for k in governor.K_OPTIONS if k <= MAX_K],
         )
         k = repair.k if repair else 0
+        economics = None
+        if self.cortex is not None and repair is None:  # L5: never a smaller n, a cheaper path
+            choice = self.cortex.decide(sig.host, budget_usd=budget.budget, n_required=n,
+                                        var_usd=budget.var,
+                                        k_options=tuple(k for k in governor.K_OPTIONS
+                                                        if k <= MAX_K))  # fmt: skip
+            economics = decision_record(choice, self.cortex.plan, sig.host)
         plan = {
             "incident": sig.incident_id,
             "host": sig.host,
@@ -191,13 +204,20 @@ class Coordinator:
                 {"suspects": list(cause.suspects), "intent": cause.intent_record_sha}
             ),
         }
+        if self.cortex is not None:
+            plan["business_plan_sha"] = self.cortex.plan.sha  # pinned per incident
+            plan["economic_decision"] = economics
         plan["plan_sha"] = digest(plan)
         case.put("plan", "plan", plan, by="governor")
+        if economics is not None:  # the L5 decision span, for the ledger and the dossier
+            case.put("plan", "economics", {**economics, "plan_sha": plan["plan_sha"]},
+                     by="governor")  # fmt: skip
         return c.BudgetPlan(plan["budget_usd"], k, 3, plan["tier"], plan["plan_sha"])
 
     def budget_exhausted(self, sig: c.Signature, plan: c.BudgetPlan, rnd: int) -> bool:
         spent = self.ctx.case(sig.incident_id).spent()
-        next_round = max(1, plan.k) * self.inputs.cost_per_hypothesis
+        p = self.cortex.inputs(sig.host) if self.cortex is not None else self.inputs
+        next_round = max(1, plan.k) * p.cost_per_hypothesis
         return spent >= plan.budget_usd or spent + next_round > plan.budget_usd + 1e-9
 
     # ---- hypotheses ---------------------------------------------------------------------------
