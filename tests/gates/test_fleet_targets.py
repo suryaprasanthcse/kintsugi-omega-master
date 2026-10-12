@@ -13,7 +13,17 @@ OMEGA = Path(__file__).resolve().parents[2]
 
 
 def test_the_fleet_is_declared() -> None:
-    assert target_hosts(OMEGA) == ["ledger", "scout", "triage"]
+    assert target_hosts(OMEGA) == ["ledger", "omega", "scout", "triage"]
+
+
+def test_omega_itself_is_the_self_repair_target() -> None:
+    target = load_target(OMEGA, "omega")
+    assert target.self_repair
+    assert target.scopes == ("surgeon", "self_repair")
+    assert not target.host.fleet  # never serves traffic, never vaccinated
+    code = Path(target.code_env(OMEGA)["PYTHONPATH"])
+    assert (code / "omega" / "evals" / "cases.py").is_file()
+    assert all(not load_target(OMEGA, h).self_repair for h in ("ledger", "scout", "triage"))
 
 
 @pytest.mark.parametrize("host", ["ledger", "scout", "triage"])

@@ -87,6 +87,7 @@ known-first-party = ["kintsugi", "hostkit", "ledger", "scout", "triage"]
 [tool.pyright]
 include = ["kintsugi", "tests", "hosts"]
 exclude = ["tests/fixtures"]  # fixture repos import their own packages (ledger.*, scout.*)
+extraPaths = ["hosts/omega"]  # Omega's replay suite is not an installed fleet host (Stage 12)
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
 reportMissingTypeStubs = false
@@ -96,7 +97,7 @@ venv = ".venv"
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "hosts"]
-pythonpath = ["."]
+pythonpath = [".", "hosts/omega"]
 addopts = "-ra --strict-markers --import-mode=importlib"
 markers = [
     "contract: needs local Entire or Claude Code tooling (Stage 2+)",

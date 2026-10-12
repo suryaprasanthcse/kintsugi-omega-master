@@ -607,7 +607,9 @@ class Immunologist:
         matcher = self.matcher(ab.motif)
         found = []
         for host in sorted(self.ctx.targets):
-            if host in skip:
+            if (
+                host in skip or self.ctx.targets[host].self_repair
+            ):  # Omega itself: §6.9, not a vaccine
                 continue
             if matcher.matches_any(self.graph(host)):
                 found.append(host)

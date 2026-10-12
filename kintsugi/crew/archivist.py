@@ -119,6 +119,24 @@ def recent_regions(repo: Path, commits: int = 5) -> list[dict[str, Any]]:
     return regions
 
 
+def localise(
+    checkout: Path, symptom: str, *, top_k: int = 10
+) -> tuple[list[dict[str, Any]], str, str]:
+    """Step 1: ranked non-test regions for a symptom at a checkout, the agent context, and the
+    method: ``entire-graph`` search, or ``git-recent`` (the hunks of recent commits) where
+    entire-graph is unavailable. Omega's self-repair replay suite (``hosts/omega``) grades it."""
+    try:
+        found = graph.search(checkout, symptom, top_k=top_k)
+        context = graph.context(checkout, symptom, top_k=top_k, max_context_bytes=24576)
+        method = "entire-graph"
+    except (graph.GraphError, OSError):  # no entire-graph here: localise with git only
+        found = {"results": recent_regions(checkout)}
+        context = "(entire graph unavailable: regions changed by recent commits)"
+        method = "git-recent"
+    regions = [r for r in found.get("results") or [] if not _is_test(str(r.get("file_path", "")))]
+    return regions, context, method
+
+
 def blame(repo: Path, path: str, start: int, end: int) -> list[BlameLine]:
     out = _git(repo, "blame", "--porcelain", "-L", f"{start},{end}", "HEAD", "--", path)
     lines: list[BlameLine] = []
@@ -257,15 +275,7 @@ class Archivist:
         symptom = case.reader("archivist").get("symptom", "summary")["summary"]
         base = rev(target.repo, self.ctx.base_ref)
         with clean_checkout(target.repo, base) as checkout:
-            try:
-                found = graph.search(checkout, symptom, top_k=10)
-                context = graph.context(checkout, symptom, top_k=10, max_context_bytes=24576)
-            except (graph.GraphError, OSError):  # no entire-graph here: localise with git only
-                found = {"results": recent_regions(checkout)}
-                context = "(entire graph unavailable: regions changed by recent commits)"
-            regions = [
-                r for r in found.get("results") or [] if not _is_test(str(r.get("file_path", "")))
-            ]
+            regions, context, _method = localise(checkout, symptom)
             blamed = [
                 line
                 for r in regions

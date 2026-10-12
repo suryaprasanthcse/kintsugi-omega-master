@@ -29,3 +29,16 @@ hosts:
     holdout: hosts/triage/triage/evals/holdout/tasks.jsonl.age
     stress_profile: null
     live_services: [github]  # the mock GitHub holds the labels the grader reads (A-50)
+  omega:
+    # Omega itself (Stage 12, spec §6.9): its repairs commit as self-repair under the surgeon
+    # and self_repair scopes (C14); hosts/omega is the replay suite they are graded on. No
+    # holdout yet: the replay suite is the measure until W records more incidents.
+    host_yaml: hosts/omega/host.yaml
+    package_root: hosts/omega
+    tests: tests
+    lint: [kintsugi, hosts/omega/omega]
+    typecheck: [kintsugi, hosts/omega/omega]
+    holdout: null
+    stress_profile: null
+    live_services: []
+    self_repair: true

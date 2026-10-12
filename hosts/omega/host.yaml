@@ -1,0 +1,21 @@
+# Omega — KINTSUGI-Omega's own diagnosis, as a host its self-repair loop is graded on (§6.9).
+# Not a traffic-serving fleet host (fleet: false): `fleet up` and the fleet baselines skip it.
+id: omega
+package: omega
+description: Root-cause localisation of recorded incidents (replay suite of Stage 6-9 rehearsals).
+model: claude-opus-5-5
+fleet: false
+slo:
+  pass_rate: 0.75  # root-cause hit@3 over the replay suite
+economics:
+  tier: Internal
+  price_usd_month: 0
+  value_per_failed_task_usd: 1.00
+  tasks_per_hour: 1.0
+  llm_budget_usd_month: 0.00
+eval:
+  splits: {train: 4, holdout: 0}
+  grader: root-cause hit@3 (a top-3 suspect region overlaps a ground-truth symbol), cost, p95
+tools: {}
+services: {}
+offline_model: omega.agent:offline_model

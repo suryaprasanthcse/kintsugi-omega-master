@@ -46,6 +46,7 @@ class HostSpec(BaseModel):
     tools: dict[str, Tool]
     services: dict[str, str]
     offline_model: str
+    fleet: bool = True  # False: not a traffic-serving host (hosts/omega, Omega's own replay suite)
     root: Path = Path()
 
     def side_effecting_tools(self) -> set[str]:
@@ -59,7 +60,7 @@ def load_host(path: Path) -> HostSpec:
 
 def load_hosts(repo: Path) -> dict[str, HostSpec]:
     specs = [load_host(p) for p in sorted((repo / "hosts").glob("*/host.yaml"))]
-    return {spec.id: spec for spec in specs}
+    return {spec.id: spec for spec in specs if spec.fleet}
 
 
 def resolve(dotted: str) -> Any:
