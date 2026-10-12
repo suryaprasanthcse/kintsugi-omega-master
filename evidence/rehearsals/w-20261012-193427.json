@@ -1,0 +1,62 @@
+{
+ "anchor": "anchor-20261012-19",
+ "audit": {
+  "checks": [
+   "C1",
+   "C6"
+  ],
+  "exit_code": 0,
+  "results": {
+   "C1": {
+    "check": "C1",
+    "problems": [],
+    "status": "PASS",
+    "summary": "3 entries, 1 anchors",
+    "title": "ledger chain"
+   },
+   "C6": {
+    "check": "C6",
+    "problems": [],
+    "status": "PASS",
+    "summary": "1/1 commitments, 0 honeytoken hits",
+    "title": "sealed sabotage"
+   }
+  }
+ },
+ "disclosed": [
+  "practice host hosts/practice (not a fleet host)",
+  "practice spec S-P1 code.regression.exception_swallow (not S-17/18/19)",
+  "rehearsal attestation key (not the T0 key)",
+  "offline notary stand-in (git apply; no Entire checkpoint)",
+  "local pull requests (practice tests as CI; --no-ff merges)"
+ ],
+ "duration_s": 7.0,
+ "kind": "w-wiring-rehearsal",
+ "ledger": [
+  {
+   "event": null,
+   "seq": 1,
+   "type": "genesis"
+  },
+  {
+   "event": "sealed",
+   "seq": 2,
+   "type": "sabotage"
+  },
+  {
+   "event": "delivered",
+   "seq": 3,
+   "type": "sabotage"
+  }
+ ],
+ "model": "offline",
+ "not_exercised": {
+  "C11,C14": "antibodies and self-repairs inside W",
+  "C13": "the practice host has no sealed holdout",
+  "C2-C5": "Entire checkpoints from real sessions",
+  "C7,C12": "GitHub",
+  "C8-C10": "neatlogs"
+ },
+ "phase": "rehearsal",
+ "run": "w-20261012-193427"
+}
