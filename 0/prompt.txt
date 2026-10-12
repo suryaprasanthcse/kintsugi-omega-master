@@ -1,0 +1,51 @@
+<pasted_content id="7e03">
+READ-ONLY PRE-FLIGHT INTERROGATION — DO NOT EDIT FILES OR RUN BUILD TASKS YET.
+
+Read `CLAUDE.md`, `MASTER_HANDOFF.md`, and `docs/EXECUTION_PLAN.md` in `C:\myspace\hacckathons\kintsugi-omega-master`.
+
+Before I launch you into an unattended overnight autonomous run (while I sleep) to complete Stages 9–13, answer these 4 operational questions concisely so we can lock in the exact execution strategy:
+
+1. Isolation & Baseline Check:
+   - Confirm `pwd`, `git remote -v` (must point ONLY to `suryaprasanthcse/kintsugi-omega-master`), `git rev-parse --short HEAD`, and whether `omega-ci` passed on `10d08b5`.
+
+2. Opus 5.5 Effort Level Strategy (`Low`, `Medium`, `High`, `Max`, `Extra`, `Ultracode`):
+   - We are running strictly on **Opus 5.5**. I have ~86% of my current 5-hour session window (resets in ~3 hours) and 46% of my weekly Pro quota remaining (resets in ~24 hours).
+   - Evaluate ALL Opus 5.5 effort levels (`Low`, `Medium`, `High`, `Max`, `Extra`, `Ultracode`) against the exact scope of Stage 13 runtime wiring + Stages 9, 10, 11, and 12 in `MASTER_HANDOFF.md`.
+   - Which exact Opus 5.5 effort setting should I select in the UI for the main orchestrator (and for any subagents) so you complete all 5 stages in one unattended overnight run with zero mid-run quota exhaustion and full architectural rigor?
+
+3. Parallel Subagents vs. Entire Checkpoint Hygiene:
+   - What is the fastest safe way to parallelize this build?
+   - Can you spawn parallel subagents to implement independent packages (`kintsugi/cortex`, `kintsugi/clinic`, `kintsugi/arena`, `kintsugi/self_repair`, and Stage 13 wiring) + their unit tests concurrently, and then have the main agent run targeted `pytest` and commit them sequentially? Or how does `Entire-Checkpoint` (`files_touched` tracking) behave when subagents write files?
+
+4. Optimal Stage Grouping & Commit Plan:
+   - Propose the exact grouping, wave structure, and commit/push ordering of Stages 13, 9, 10, 11, and 12 (which stages can be built in parallel waves, which depend on each other, and how many commits/pushes to make) to guarantee maximum completion and green `omega-ci` runs while I sleep.
+
+Wait for my go-ahead after answering these 4 points.
+</pasted_content id="7e03">
+
+---
+
+GO-AHEAD CONFIRMED — LAUNCH UNATTENDED OVERNIGHT EXECUTION NOW.
+
+Here are my confirmations for all 5 of your points:
+
+1. Scope Confirmed (`13a -> 9 -> 12`, plus offline-only `10` & `11` Python modules if quota remains):
+   - Execute your exact sequential plan: Wave A (`13a` A1–A5, omitting step 4 `S-17/18/19` to preserve A-57 and writing WSL launcher files only in A4) -> Wave B (`Stage 9` B1–B5) -> Wave C (`Stage 12` C1–C4).
+   - Quota-saving rule on rehearsals: In A5 and C4, prefer deterministic/offline harness runs (`model=offline`) if `claude -p` would burn disproportionate Opus quota.
+   - Bonus Wave D (ONLY if weekly quota still remains after Waves A, B, and C are committed, pushed, and green on `omega-ci`): Implement the purely local/offline Python modules and unit tests for `kintsugi/onboard` (Stage 10 local repo analysis/health-card logic with zero foreign network/GitHub calls) and `kintsugi/arena_api.py` (Stage 11 FastAPI backend + unit tests, skipping Next.js `npm install`), then update `README.md`, `docs/EXECUTION_PLAN.md`, `docs/VERIFICATION.md`, and `MASTER_HANDOFF.md`.
+
+2. Unattended Git & PR Permission Granted:
+   - You have explicit permission for unattended pushes of `main`, `ledger`, `rehearsal/*`, and `refs/entire/checkpoints/v1` to `origin` (`suryaprasanthcse/kintsugi-omega-master`), and for opening/merging rehearsal PRs on `suryaprasanthcse/kintsugi-omega-master` (A5).
+   - Keep Surya Prasanth R (`@suryaprasanthcse`) as the sole contributor (`ENTIRE_TEST_TTY=0`, zero `Co-authored-by:` trailers, verified `files_touched` on every commit).
+   - Never touch the frozen `C:\myspace\hacckathons\kintsugi-omega` repo.
+
+3. Effort Level:
+   - I have switched the UI effort toggle to `High`.
+
+4. Keep-Awake:
+   - YES — turn on PC keep-awake (`powercfg` standby/hibernate timeout 0 on AC) (architect notes:dont do this as i already done that manually )right now so Windows never sleeps during the run or before the 04:45 IST resume.
+
+5. 04:45 IST Auto-Resume Scheduled Task:
+   - YES — create the scheduled task for ~04:45 IST so if the current 5-hour window exhausts before Waves A–C (+ optional D) finish, you automatically resume after the 04:40 IST reset and continue until the work is done or the 44% weekly limit is reached.
+
+Start immediately and run continuously without stopping for confirmation. Goodnight!
