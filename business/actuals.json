@@ -1,0 +1,49 @@
+{
+ "fields": [
+  "date",
+  "host",
+  "kind",
+  "usd",
+  "ref",
+  "source",
+  "phase"
+ ],
+ "spends": [
+  {
+   "date": "2026-10-11",
+   "host": "ledger-practice",
+   "kind": "repair",
+   "phase": "rehearsal",
+   "ref": "INC-R235459-0001",
+   "source": "evidence/rehearsals/reh-20261011-235459.json; case cost: evidence/rehearsals/l3-20261012-074523.json",
+   "usd": 0.665376
+  },
+  {
+   "date": "2026-10-11",
+   "host": "ledger-practice",
+   "kind": "repair",
+   "phase": "rehearsal",
+   "ref": "INC-REH-0001",
+   "source": "evidence/rehearsals/reh-20261011-232114.json",
+   "usd": 1.783803
+  },
+  {
+   "date": "2026-10-12",
+   "host": "crm-practice",
+   "kind": "vaccination",
+   "phase": "rehearsal",
+   "ref": "VAC-AB-1-crm-practice",
+   "source": "evidence/rehearsals/l3-20261012-074523.json",
+   "usd": 0.08905
+  },
+  {
+   "date": "2026-10-12",
+   "host": "scout",
+   "kind": "vaccination",
+   "phase": "rehearsal",
+   "ref": "VAC-AB-1-scout",
+   "source": "evidence/rehearsals/l3-20261012-074523.json",
+   "usd": 0.104426
+  }
+ ]
+}

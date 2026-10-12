@@ -1,0 +1,5 @@
+date,host,kind,usd,ref,source,phase
+2026-10-11,ledger-practice,repair,0.665376,INC-R235459-0001,evidence/rehearsals/reh-20261011-235459.json; case cost: evidence/rehearsals/l3-20261012-074523.json,rehearsal
+2026-10-11,ledger-practice,repair,1.783803,INC-REH-0001,evidence/rehearsals/reh-20261011-232114.json,rehearsal
+2026-10-12,crm-practice,vaccination,0.089050,VAC-AB-1-crm-practice,evidence/rehearsals/l3-20261012-074523.json,rehearsal
+2026-10-12,scout,vaccination,0.104426,VAC-AB-1-scout,evidence/rehearsals/l3-20261012-074523.json,rehearsal

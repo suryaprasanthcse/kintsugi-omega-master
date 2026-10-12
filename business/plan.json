@@ -1,0 +1,66 @@
+{
+ "version": 1,
+ "as_of": "2026-10-13",
+ "currency": "USD",
+ "note": "The business plan the governor prices repairs against (spec §4.6). Prices, tiers and C_mon budgets mirror each host's host.yaml; per-run and per-hypothesis costs are the plan's estimates; Triage's figures are spec §6.8's. Each incident's plan pins this file's sha256.",
+ "policy": {
+  "gm_floor": 0.70,
+  "power_floor": 0.8,
+  "max_k": 3,
+  "kappa": 1.0,
+  "horizon_h": 24.0,
+  "days_in_month": 30.0
+ },
+ "company": {
+  "cash_usd": null,
+  "fixed_costs_usd_month": null,
+  "note": "Runway needs the Architect's cash and fixed costs; until they are set, the runway export says so instead of inventing them."
+ },
+ "hosts": {
+  "ledger": {
+   "tier": "Team",
+   "price_usd_month": 299.0,
+   "c_mon_usd_month": 30.0,
+   "expected_incidents_month": 4.0,
+   "cost_per_run_usd": 0.004,
+   "cost_per_hypothesis_usd": 3.0,
+   "p01": 0.02,
+   "holdout_pairs": 120,
+   "treatments": []
+  },
+  "scout": {
+   "tier": "Team",
+   "price_usd_month": 299.0,
+   "c_mon_usd_month": 30.0,
+   "expected_incidents_month": 4.0,
+   "cost_per_run_usd": 0.004,
+   "cost_per_hypothesis_usd": 3.0,
+   "p01": 0.02,
+   "holdout_pairs": 120,
+   "treatments": []
+  },
+  "triage": {
+   "tier": "Pilot",
+   "price_usd_month": 99.0,
+   "c_mon_usd_month": 6.0,
+   "expected_incidents_month": 3.0,
+   "cost_per_run_usd": 0.11,
+   "cost_per_hypothesis_usd": 1.4,
+   "p01": 0.02,
+   "holdout_pairs": 90,
+   "treatments": [
+    {
+     "name": "T1 route classify_component Haiku→Sonnet",
+     "probe_cost_usd": 0.9,
+     "delta_cost_usd_month": 3.6,
+     "change": {
+      "file": "hosts/triage/config/routing.yaml",
+      "step": "classify_component",
+      "from": "claude-haiku-5-5",
+      "to": "claude-sonnet-5-5"
+     }
+    }
+   ]
+  }
+ }
+}
