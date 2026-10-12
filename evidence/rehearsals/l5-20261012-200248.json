@@ -1,0 +1,185 @@
+{
+ "after_treatment": {
+  "failed": 5,
+  "failing": [
+   "live-4/triage-live-011",
+   "live-4/triage-live-020",
+   "live-5/triage-live-000",
+   "live-5/triage-live-013",
+   "live-5/triage-live-029"
+  ],
+  "failure_rate": 0.027778,
+  "mixed_language": 19,
+  "tasks": 180
+ },
+ "batches": [
+  "live-1",
+  "live-2",
+  "live-3",
+  "live-4",
+  "live-5",
+  "live-6"
+ ],
+ "before": {
+  "failed": 9,
+  "failing": [
+   "live-3/triage-live-006",
+   "live-3/triage-live-013",
+   "live-4/triage-live-011",
+   "live-4/triage-live-020",
+   "live-4/triage-live-027",
+   "live-5/triage-live-000",
+   "live-5/triage-live-013",
+   "live-5/triage-live-029",
+   "live-6/triage-live-003"
+  ],
+  "failure_rate": 0.05,
+  "mixed_language": 19,
+  "tasks": 180
+ },
+ "disclosed": [
+  "offline model (Haiku stand-in reads English keywords only, A-27)",
+  "offline notary stand-in (git apply; no Entire checkpoint)",
+  "scenario (b) uses spec §6.8's inputs, not measured ones"
+ ],
+ "duration_s": 50.0,
+ "host": "triage",
+ "kind": "l5-rehearsal",
+ "measured": {
+  "budget_usd": 0.0,
+  "business_plan_sha": "bf1d028e87fb3835cd7bee8a5d5611b3553e61a375b03cb89bf016b10cb6f757",
+  "decision": {
+   "action": "escalate",
+   "alternatives": {
+    "T1 route classify_component Haiku→Sonnet": 3.18,
+    "do nothing (per day)": 2.25,
+    "repair K=1": 25.71,
+    "repair K=2": 27.11,
+    "repair K=3": 28.51
+   },
+   "budget_usd": 2.25,
+   "business_plan_sha": "bf1d028e87fb3835cd7bee8a5d5611b3553e61a375b03cb89bf016b10cb6f757",
+   "change": null,
+   "plan": null,
+   "power_floor": 0.8,
+   "rejected": {
+    "T1 route classify_component Haiku→Sonnet": "exceeds budget",
+    "do nothing (per day)": "expected loss continues",
+    "repair K=1": "exceeds budget",
+    "repair K=2": "exceeds budget",
+    "repair K=3": "exceeds budget",
+    "repair with lower n": "power below 0.8 is forbidden by policy"
+   },
+   "treatment": null
+  },
+  "incident": "INC-L5MEASURED-0001",
+  "k": 0,
+  "ledger": [
+   {
+    "action": "escalate",
+    "seq": 1,
+    "type": "economics"
+   }
+  ],
+  "month": "2026-10",
+  "n_pairs": 221,
+  "plan_sha": "sha256:9ff8ec96e466e82e268dafab6107926117f2bceb372b5ec0631f169b17706d59",
+  "r_fail": 0.05,
+  "spent_mtd_usd": 0,
+  "treatment": null,
+  "var_usd": 2.25
+ },
+ "model": "offline",
+ "phase": "rehearsal",
+ "routing_after": [
+  "classify_type: claude-haiku-5-5",
+  "classify_component: claude-sonnet-5-5",
+  "detect_duplicate: claude-haiku-5-5"
+ ],
+ "run": "l5-20261012-200248",
+ "seed": 1,
+ "spec_6_8": {
+  "budget_usd": 0.0,
+  "business_plan_sha": "bf1d028e87fb3835cd7bee8a5d5611b3553e61a375b03cb89bf016b10cb6f757",
+  "decision": {
+   "action": "treat_and_escalate",
+   "alternatives": {
+    "T1 route classify_component Haiku→Sonnet": 2.34,
+    "do nothing (per day)": 6.75,
+    "repair K=1": 8.11,
+    "repair K=2": 9.51,
+    "repair K=3": 10.91
+   },
+   "budget_usd": 4.8333,
+   "business_plan_sha": "bf1d028e87fb3835cd7bee8a5d5611b3553e61a375b03cb89bf016b10cb6f757",
+   "change": {
+    "file": "hosts/triage/config/routing.yaml",
+    "from": "claude-haiku-5-5",
+    "step": "classify_component",
+    "to": "claude-sonnet-5-5"
+   },
+   "plan": null,
+   "power_floor": 0.8,
+   "rejected": {
+    "do nothing (per day)": "expected loss continues",
+    "repair K=1": "exceeds budget",
+    "repair K=2": "exceeds budget",
+    "repair K=3": "exceeds budget",
+    "repair with lower n": "power below 0.8 is forbidden by policy"
+   },
+   "treatment": {
+    "delta_cost_per_month": 3.6,
+    "name": "T1 route classify_component Haiku→Sonnet",
+    "probe_cost": 0.9
+   }
+  },
+  "incident": "INC-L5SPEC-0001",
+  "inputs": {
+   "date": "2026-10-19",
+   "r_fail": 0.15,
+   "spent_mtd_usd": 9.2
+  },
+  "k": 0,
+  "ledger": [
+   {
+    "action": "treat_and_escalate",
+    "seq": 1,
+    "treatment": {
+     "delta_cost_per_month": 3.6,
+     "name": "T1 route classify_component Haiku→Sonnet",
+     "probe_cost": 0.9
+    },
+    "type": "economics"
+   },
+   {
+    "ok": true,
+    "reason": "",
+    "seq": 2,
+    "treatment": "T1 route classify_component Haiku→Sonnet",
+    "type": "treatment"
+   }
+  ],
+  "month": "2026-10",
+  "n_pairs": 61,
+  "plan_sha": "sha256:ff213b30628b9e768d9c9089d3cc47a0f2870fd0c22363366194a148cf66ee42",
+  "r_fail": 0.15,
+  "spent_mtd_usd": 9.2,
+  "treatment": {
+   "at": "2026-10-12T20:03:16+00:00",
+   "checkpoint": null,
+   "commit": "6c0b8be4cda5de5c554dc2aebff61c9810d585db",
+   "hash": "9c8f109893f9b8dbbc432b6e85e807e3857b5171b738919165acb3c4b1401754",
+   "host": "triage",
+   "incident": "INC-L5SPEC-0001",
+   "merge_sha": "52a425ee94930f886333e48c2fcf95c9a9054cea",
+   "ok": true,
+   "pr": "local://kintsugi/TRT-INC-L5SPEC-0001/treat",
+   "prev": "8d8b6ec12869609c28c9fc2cc602a895d961b20eee71ae3b66e6b2c780cc2181",
+   "reason": "",
+   "seq": 2,
+   "treatment": "T1 route classify_component Haiku→Sonnet",
+   "type": "treatment"
+  },
+  "var_usd": 6.75
+ }
+}

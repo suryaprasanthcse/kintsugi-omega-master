@@ -40,6 +40,7 @@ from kintsugi.crew.notary import Notary, NotaryRequest
 from kintsugi.crew.pathologist import Pathologist
 from kintsugi.crew.saboteur import SabotageRefused, Saboteur
 from kintsugi.crew.sentinel import Sentinel
+from kintsugi.crew.treatment import Treater
 from kintsugi.econ.cortex import Cortex
 from kintsugi.gates import canary
 from kintsugi.gates.checkout import rev
@@ -151,8 +152,10 @@ class OmegaCrew:
         anchoring: Anchoring | None = None,
         sabotage: SabotageLane | None = None,
         cortex: Cortex | None = None,  # Stage 9: business plan + live actuals behind budgets
+        treater: Treater | None = None,  # Stage 9: applies an L5 treatment the governor chose
     ) -> None:
         self.ctx = ctx
+        self.treater = treater
         self.runner = runner
         self.shipper = shipper
         self.fixes = fixes
@@ -247,7 +250,31 @@ class OmegaCrew:
             if not mine:  # a retried step records it once
                 self.ledger.append({"type": "economics", "incident": sig.incident_id,
                                     "host": sig.host, **economics})  # fmt: skip
+            if economics.get("action") == "treat_and_escalate" and economics.get("change"):
+                self.treat(sig, economics)
         return plan
+
+    def treat(self, sig: c.Signature, economics: Mapping[str, Any]) -> None:
+        """L5: apply the chosen treatment once (a notary commit); the incident still escalates."""
+        if self.treater is None:
+            return
+        done = [e for e in self.ledger.entries() if e.get("type") == "treatment"
+                and e.get("incident") == sig.incident_id]  # fmt: skip
+        if done:
+            return
+        name = str((economics.get("treatment") or {}).get("name", ""))
+        cost = float(economics["alternatives"].get(name, 0.0))
+        why = (f"{sig.incident_id} on {sig.host}: no repair fits the "
+               f"${economics['budget_usd']:.2f} budget at power 0.8; {name} costs ${cost:.2f} "
+               "this month and keeps the margin floor.")  # fmt: skip
+        try:
+            result = self.treater.apply(self.ctx.target(sig.host), economics["change"],
+                                        record=f"TRT-{sig.incident_id}"[:64], treatment=name,
+                                        why=why)  # fmt: skip
+        except (RuntimeError, ValueError, OSError) as error:  # recorded; the escalation stands
+            result = {"ok": False, "reason": str(error)[:300]}
+        self.ledger.append({"type": "treatment", "incident": sig.incident_id, "host": sig.host,
+                            "treatment": name, **result})  # fmt: skip
 
     def do_hypothesize(self, step: StepContext, *args: Any) -> list[c.Card]:
         sig, cause, plan, rnd, history, prior = args

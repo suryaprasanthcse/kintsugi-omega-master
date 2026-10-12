@@ -88,8 +88,10 @@ def test_an_unaffordable_repair_escalates_with_the_l5_decision_on_the_ledger(
     triage_ctx.case("INC-0009").put("incident_open", "open", {"var_estimate": 6.75},
                                     by="sentinel")  # fmt: skip
     ledger = FileLedger(tmp_path / "ledger.jsonl", genesis_hash("t0", b"\0" * 32))
+    treated: list[str] = []  # the treatment itself is tests/crew/test_l5.py's
     crew: Any = SimpleNamespace(coordinator=Coordinator(triage_ctx, cortex=cortex),
-                                ctx=triage_ctx, ledger=ledger)  # fmt: skip
+                                ctx=triage_ctx, ledger=ledger,
+                                treat=lambda sig, econ: treated.append(econ["action"]))  # fmt: skip
     plan = OmegaCrew.do_plan_budget(crew, None, sig, c.Cause(("classify_component",)))  # type: ignore[arg-type]
     OmegaCrew.do_plan_budget(crew, None, sig, c.Cause(("classify_component",)))  # type: ignore[arg-type]
     assert plan.budget_usd == 0.0  # the workflow escalates: "no repair budget (L5)"
@@ -101,6 +103,7 @@ def test_an_unaffordable_repair_escalates_with_the_l5_decision_on_the_ledger(
     assert decision["change"]["file"] == "hosts/triage/config/routing.yaml"
     assert decision["power_floor"] == 0.8
     assert stored["n_pairs"] >= 34  # the full-power sample, never reduced
+    assert treated == ["treat_and_escalate"] * 2  # treat() itself is idempotent on the ledger
     entries = [e for e in ledger.entries() if e.get("type") == "economics"]
     assert len(entries) == 1  # a retried step records the decision once
     assert entries[0]["plan_sha"] == plan.plan_sha

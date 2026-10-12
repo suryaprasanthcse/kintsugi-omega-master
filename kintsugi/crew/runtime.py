@@ -50,6 +50,7 @@ from kintsugi.crew.immunologist import Immunologist
 from kintsugi.crew.notary import Notary
 from kintsugi.crew.saboteur import Saboteur
 from kintsugi.crew.surgeon import ClaudeSurgeon
+from kintsugi.crew.treatment import Treater
 from kintsugi.crew.upstream import UpstreamConfig, UpstreamLane
 from kintsugi.econ.cortex import PLAN_FILE, Cortex
 from kintsugi.gates.holdout import _inside_git_worktree
@@ -219,8 +220,9 @@ def build(cfg: RuntimeConfig) -> OmegaCrew:
     anchoring = Anchoring(signer, repo_url, cfg.anchor_out or state / "anchors",
                           remote=cfg.remote if cfg.push_ledger else None)  # fmt: skip
     cortex = Cortex.from_repo(repo) if (repo / PLAN_FILE).is_file() else None  # Stage 9
+    treater = Treater(notary, Reverter(notary, RevertConfig(remote=cfg.remote), github=gh))
     return OmegaCrew(ctx, runner=lambda: surgeon, shipper=shipper, ledger=ledger,
-                     immunity=immunity, anchoring=anchoring, cortex=cortex,
+                     immunity=immunity, anchoring=anchoring, cortex=cortex, treater=treater,
                      sabotage=sabotage_lane(cfg, notary, gh, tuple(targets)))  # fmt: skip
 
 
