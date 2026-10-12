@@ -1,0 +1,50 @@
+name: Repair Clinic intake
+description: Ask KINTSUGI-Omega to watch and repair your AI agent (pull requests only; you merge).
+title: "[Clinic] <owner/name>"
+labels: ["clinic-intake"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Omega analyses a local copy of your repository and the traces you export, proposes fixes
+        as pull requests with a repair receipt, and never merges into your repository. Read
+        kintsugi/onboard/intake.py for how this form is parsed.
+  - type: input
+    id: repository
+    attributes:
+      label: Repository
+      description: owner/name on GitHub
+      placeholder: octo-org/support-agent
+    validations:
+      required: true
+  - type: input
+    id: entry-point
+    attributes:
+      label: Agent entry point
+      description: the path of the agent's entry point inside the repository
+      placeholder: agent/main.py
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What goes wrong
+      description: what the agent gets wrong, how often, and what a failure costs you
+    validations:
+      required: true
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Consent
+      description: every box is required; Omega refuses an intake without all of them
+      options:
+        - label: I maintain this repository or have its maintainers' permission
+          required: true
+        - label: Omega may analyse a local copy of the repository read-only
+          required: true
+        - label: Fixes arrive as pull requests; only maintainers merge
+          required: true
+        - label: Traces are exported by us; Omega never collects them
+          required: true
+        - label: The repair receipt and its proof bundle may be published
+          required: true
