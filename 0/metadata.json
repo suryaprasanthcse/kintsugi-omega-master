@@ -1,0 +1,59 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4RYRE9JXKCNPMF5DE6134Q6",
+  "session_id": "403c4b48-87e7-4095-922a-f04b96856bee",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-12T21:02:08.2306613Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    ".github/ISSUE_TEMPLATE/clinic-intake.yml",
+    "kintsugi/arena_api.py",
+    "kintsugi/onboard/__init__.py",
+    "kintsugi/onboard/eval_synth.py",
+    "kintsugi/onboard/immune_scan.py",
+    "kintsugi/onboard/instrument.py",
+    "kintsugi/onboard/intake.py",
+    "kintsugi/onboard/pipeline.py",
+    "kintsugi/onboard/replay_mode.py",
+    "tests/onboard/__init__.py",
+    "tests/onboard/test_onboard.py",
+    "tests/test_arena_api.py"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-opus-5-5",
+  "turn_id": "9c3e0401ee62",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 536,
+    "cache_creation_tokens": 582823,
+    "cache_read_tokens": 103525475,
+    "output_tokens": 295793,
+    "api_call_count": 268
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-12T21:02:08.0895051Z",
+    "agent_lines": 1028,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 1028,
+    "total_lines_changed": 1028,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1028,
+      "agent_lines_removed": 0
+    }
+  ]
+}
