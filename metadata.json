@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4RVHEVZ5DNN358M9QXFC2Q3",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/EXECUTION_PLAN.md",
+    "evidence/rehearsals/l5-20261012-200248.json",
+    "kintsugi/crew/factory.py",
+    "kintsugi/crew/l5_rehearsal.py",
+    "kintsugi/crew/runtime.py",
+    "kintsugi/crew/treatment.py",
+    "tests/crew/test_l5.py",
+    "tests/econ/test_cortex.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 54,
+    "cache_creation_tokens": 45975,
+    "cache_read_tokens": 12100892,
+    "output_tokens": 33217,
+    "api_call_count": 27
+  }
+}
