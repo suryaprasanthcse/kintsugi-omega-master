@@ -1,0 +1,7 @@
+<task-notification>
+<task-id>bu7o95l8k</task-id>
+<tool-use-id>toolu_012kKn4xnfHh5pLMbqPjaes5</tool-use-id>
+<output-file>C:\Users\surya\AppData\Local\Temp\claude\C--myspace-hacckathons-kintsugi-omega-master\403c4b48-87e7-4095-922a-f04b96856bee\tasks\bu7o95l8k.output</output-file>
+<status>completed</status>
+<summary>Background command "Full test suite on the Wave B head" completed (exit code 0)</summary>
+</task-notification>

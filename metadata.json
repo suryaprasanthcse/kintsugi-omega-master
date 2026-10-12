@@ -1,0 +1,42 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4RWFQRQEVRBKRXWFAQHH1M3",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".kintsugi/target.yaml",
+    "hosts/omega/host.yaml",
+    "hosts/omega/omega/__init__.py",
+    "hosts/omega/omega/agent.py",
+    "hosts/omega/omega/evals/__init__.py",
+    "hosts/omega/omega/evals/cases.py",
+    "hosts/omega/omega/evals/replay.py",
+    "hosts/omega/omega/evals/run.py",
+    "hosts/omega/omega/graders/__init__.py",
+    "hosts/omega/omega/graders/grade.py",
+    "kintsugi/crew/archivist.py",
+    "kintsugi/crew/immunologist.py",
+    "kintsugi/fleet/hosts.py",
+    "pyproject.toml",
+    "tests/gates/test_fleet_targets.py",
+    "tests/omega/__init__.py",
+    "tests/omega/test_replay_suite.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 38,
+    "cache_creation_tokens": 34004,
+    "cache_read_tokens": 9814206,
+    "output_tokens": 23989,
+    "api_call_count": 19
+  }
+}
