@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4RWRNNX29PN1HEWX8B1DPJQ",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/EXECUTION_PLAN.md",
+    "evidence/rehearsals/self-20261012-202518.json",
+    "kintsugi/crew/self_repair_rehearsal.py",
+    "tests/crew/test_self_repair_rehearsal.py",
+    "tests/fixtures/rehearsal/self_repair/localise.patch"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 26,
+    "cache_creation_tokens": 27510,
+    "cache_read_tokens": 7118847,
+    "output_tokens": 19344,
+    "api_call_count": 13
+  }
+}
