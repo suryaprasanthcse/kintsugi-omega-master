@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 import secrets
 import sys
 import threading
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -78,8 +80,19 @@ def chaos_token(repo: Path) -> str:
     return token
 
 
+# What the worker pools need beyond the gateway's allowlist: the W runtime file (Stage 13a) and
+# the neatlogs Public API credentials the crew reads failing traces with. Passed explicitly.
+POOL_ENV = ("KINTSUGI_RUNTIME", "NEATLOGS_PROJECT_ID", "NEATLOGS_SERVICE_TOKEN",
+            "NEATLOGS_OAUTH_TOKEN")  # fmt: skip
+
+
+def pool_env(source: Mapping[str, str]) -> dict[str, str]:
+    return {key: source[key] for key in POOL_ENV if source.get(key)}
+
+
 def build_watchdog(repo: Path, target: str, crew: str, *, ingress_admin: str | None,
-                   admin_token: str | None) -> w.Watchdog:  # fmt: skip
+                   admin_token: str | None, env: Mapping[str, str] | None = None,
+                   ) -> w.Watchdog:  # fmt: skip
     """The standard pools: crew + senses in one process, the Surgeons in their own (§6.6)."""
     from kintsugi.senses.service import STORE_PATH
     from kintsugi.senses.store import SenseStore
@@ -88,9 +101,10 @@ def build_watchdog(repo: Path, target: str, crew: str, *, ingress_admin: str | N
     supervisor = w.Supervisor(pager)
     base = [sys.executable, "-m", "kintsugi.control.worker", "--target", target, "--crew", crew,
             "--ledger", str(repo / CONTROL_DIR / "steps.sqlite")]  # fmt: skip
-    supervisor.add(w.Pool("crew", [*base, "--pool", "crew", "--pool", "senses"],
+    extra = pool_env(os.environ if env is None else env)
+    supervisor.add(w.Pool("crew", [*base, "--pool", "crew", "--pool", "senses"], extra_env=extra,
                           log=repo / WATCHDOG_DIR / "crew.log"))  # fmt: skip
-    supervisor.add(w.Pool("surgeon", [*base, "--pool", "surgeon"],
+    supervisor.add(w.Pool("surgeon", [*base, "--pool", "surgeon"], extra_env=extra,
                           log=repo / WATCHDOG_DIR / "surgeon.log"))  # fmt: skip
     checks = {
         "temporal-pollers": w.temporal_pollers_check(target, [CREW, SURGEON, SENSES]),

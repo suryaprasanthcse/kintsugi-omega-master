@@ -83,11 +83,13 @@ class FileLedger:
 @dataclass(frozen=True)
 class Anchoring:
     """Stage 8: hourly signed anchors of a ``BranchLedger`` (A-67). Omega writes the tag and the
-    post text under ``out_dir``; the Architect posts the text."""
+    post text under ``out_dir``; the Architect posts the text. With ``remote`` set, the ledger
+    branch and its anchor tags are pushed after each anchor (fast-forward only, Stage 13a)."""
 
     signer: Signer
     repo_url: str
     out_dir: Path
+    remote: str | None = None
 
 
 @dataclass
@@ -448,6 +450,8 @@ class OmegaCrew:
         out = self.anchoring.out_dir / f"{anchor.tag}.txt"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(post_text(anchor, self.anchoring.repo_url) + "\n", encoding="utf-8")
+        if self.anchoring.remote is not None:  # a rejected push fails the step: a rewrite
+            self.ledger.push(self.anchoring.remote)
         return anchor.tag
 
     # ---- Stage 7: antibodies (§5.8), vaccination (§6.5 steps 12–14), L3 (§6.7) -----------------

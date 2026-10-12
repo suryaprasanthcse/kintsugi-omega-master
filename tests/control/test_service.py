@@ -6,8 +6,11 @@ import asyncio
 import json
 from pathlib import Path
 
+import pytest
+
 from kintsugi.control import contracts as c
 from kintsugi.control import service as svc
+from kintsugi.control import watchdog as w
 from kintsugi.control.activities import CREW
 from kintsugi.control.workflows import Incident
 from tests.helpers.control import FAST, Scenario, crew_for, temporal
@@ -32,6 +35,22 @@ def test_history_export_and_an_idempotent_supervisor_start(tmp_path: Path) -> No
     assert exported["events"][0]["eventType"] == "EVENT_TYPE_WORKFLOW_EXECUTION_STARTED"
     assert starts[0].startswith("started fleet-supervisor")
     assert starts[1] == "fleet-supervisor is already running"
+
+
+def test_worker_pools_receive_the_runtime_file_and_nothing_else(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    added: list[w.Pool] = []
+    monkeypatch.setattr(w.Supervisor, "add", lambda self, pool: added.append(pool))  # no start
+    env = {"KINTSUGI_RUNTIME": "C:/runtime.json", "NEATLOGS_PROJECT_ID": "p",
+           "ANTHROPIC_API_KEY": "never-forwarded", "NEATLOGS_OAUTH_TOKEN": ""}  # fmt: skip
+    svc.build_watchdog(tmp_path, "localhost:7233", "kintsugi.crew.runtime:crew",
+                       ingress_admin=None, admin_token=None, env=env)  # fmt: skip
+    assert [pool.name for pool in added] == ["crew", "surgeon"]
+    for pool in added:
+        assert dict(pool.extra_env) == {"KINTSUGI_RUNTIME": "C:/runtime.json",
+                                        "NEATLOGS_PROJECT_ID": "p"}  # fmt: skip
+        assert "kintsugi.crew.runtime:crew" in pool.argv
 
 
 def test_the_chaos_token_is_generated_once_and_kept(tmp_path: Path) -> None:
