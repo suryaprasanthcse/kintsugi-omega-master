@@ -42,7 +42,10 @@ def _git(repo: Path, *args: str) -> proc.Result:
 
 
 def _hosts(repo: Path) -> list[str]:
-    return sorted(p.parent.name for p in (repo / "hosts").glob("*/host.yaml"))
+    """The fleet's hosts (``fleet: false`` hosts such as Omega's replay suite have no baseline)."""
+    from kintsugi.fleet.hosts import load_hosts
+
+    return sorted(load_hosts(repo))
 
 
 def _recipient_of(identity_file: Path) -> str | None:
