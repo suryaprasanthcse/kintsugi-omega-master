@@ -63,7 +63,7 @@ class Treater:
                 operation="l5-treatment", reference=treatment, incident=record,
                 purpose=(f"{why} The governor chose this treatment over a repair (spec §6.8); "
                          "the patch changes one routing line and nothing else."),
-                diff=diff, subject=subject, scopes=("surgeon",)),
+                diff=diff, subject=subject, scopes=target.scopes),
                 package_root=target.package_root)  # fmt: skip
         finally:
             worktree.release_lock(wt)

@@ -170,7 +170,7 @@ class ClaudeSurgeon:
         )
         attestation = attest.SessionAttestation(
             nonce=nonce,
-            role="surgeon",
+            role=target.repair_role,  # "self-repair" when Omega repairs itself (C14)
             incident=card.incident_id,
             worktree=f"wt/{card.incident_id}/{card.hypothesis}",
             base_sha=wt.base_sha,
@@ -186,6 +186,7 @@ class ClaudeSurgeon:
                 subject=f"fix({card.incident_id}): {brief['title']} [{card.hypothesis}]"[:100],
                 body=f"Hypothesis {card.hypothesis}, round {card.round}: {brief['approach']}"[:500],
                 policy=load_policy(),
+                scopes=target.scopes,
                 session_paths=edited(stream.tool_uses, wt.path),
                 approved_large_diff=bool(brief.get("approved_large_diff")),
                 require_checkpoint=self.require_checkpoint,

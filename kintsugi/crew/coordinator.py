@@ -305,7 +305,7 @@ class Coordinator:
             {
                 str(r["file"])
                 for r in report.get("regions") or []
-                if not policy.violations([str(r["file"])], ["surgeon"])
+                if not policy.violations([str(r["file"])], list(target.scopes))
             }
         )
 
@@ -325,7 +325,8 @@ class Coordinator:
         base = rev(target.repo, self.ctx.base_ref)
         cards: list[c.Card] = []
         for hyp, raw in zip(self._next_ids(case, k), list(answer.data["cards"])[:k], strict=False):
-            allowed = [f for f in raw["allowed_files"] if not policy.violations([f], ["surgeon"])]
+            allowed = [f for f in raw["allowed_files"]
+                       if not policy.violations([f], list(target.scopes))]  # fmt: skip
             budget = int(raw["diff_budget"])
             approved = budget > policy.diff_budget_lines and bool(raw.get("large_diff_reason"))
             card = {

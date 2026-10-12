@@ -78,8 +78,9 @@ class Auditor:
                 gates[gate] = skipped(gate, reason)
         else:
             diff = antigaming.check(
-                target.repo, base, head, approved_large_diff=bool(card.get("approved_large_diff"))
-            )
+                target.repo, base, head, approved_large_diff=bool(card.get("approved_large_diff")),
+                scopes=target.scopes,
+            )  # fmt: skip
             outside = [p for p in diff.paths if p not in set(card.get("allowed_files") or [])]
             if outside and card.get("allowed_files"):
                 problems = [] if diff.result.passed else [diff.result.summary]

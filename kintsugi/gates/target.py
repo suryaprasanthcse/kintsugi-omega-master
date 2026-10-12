@@ -54,10 +54,22 @@ class Target:
     stress_profile: str | None = None
     install: tuple[str, ...] = ()  # optional G1 install command (e.g. "uv sync --locked")
     live_services: tuple[str, ...] = ()  # services holding the host's own state (A-50)
+    self_repair: bool = False  # the target is Omega itself (Stage 12, spec §6.9)
 
     @property
     def id(self) -> str:
         return self.host.id
+
+    @property
+    def scopes(self) -> tuple[str, ...]:
+        """Protected-path scopes a repair commit must respect: Omega's own repairs add
+        ``self_repair``, so they can never weaken proof, stats, gates or the gateway (C14)."""
+        return ("surgeon", "self_repair") if self.self_repair else ("surgeon",)
+
+    @property
+    def repair_role(self) -> str:
+        """The ``Kintsugi-Role`` of a repair commit; audit C14 selects ``self-repair`` ones."""
+        return "self-repair" if self.self_repair else "surgeon"
 
     def code_env(self, checkout: Path) -> dict[str, str]:
         # No bytecode caches: a same-size edit within the same second would otherwise run the
@@ -102,6 +114,7 @@ def load_target(repo: Path, host: str) -> Target:
         stress_profile=entry.get("stress_profile"),
         install=tuple(entry.get("install") or ()),
         live_services=tuple(entry.get("live_services") or ()),
+        self_repair=bool(entry.get("self_repair", False)),
     )
 
 
