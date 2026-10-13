@@ -1,0 +1,46 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4TA2RKVY8PF5TSRZWT2YFPW",
+  "session_id": "6ec8f922-2eb8-485f-8cc3-ee5110304556",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-13T09:39:17.1209706Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".github/workflows/audit.yml",
+    "kintsugi/cli.py",
+    "kintsugi/crew/w_rehearsal.py",
+    "kintsugi/demo.py",
+    "kintsugi/senses/store.py",
+    "tests/test_audit_workflow.py",
+    "tests/test_cli.py"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-opus-5-5",
+  "turn_id": "352f7beefdde",
+  "checkpoint_transcript_start": 2633,
+  "transcript_lines_at_start": 2633,
+  "compact_transcript_start": 335,
+  "token_usage": {
+    "input_tokens": 40,
+    "cache_creation_tokens": 24682,
+    "cache_read_tokens": 15218033,
+    "output_tokens": 16183,
+    "api_call_count": 20
+  },
+  "session_metrics": {
+    "turn_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-13T09:39:16.9219713Z",
+    "agent_lines": 241,
+    "agent_removed": 21,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 241,
+    "total_lines_changed": 262,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}

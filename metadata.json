@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4TA2RKVY8PF5TSRZWT2YFPW",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".github/workflows/audit.yml",
+    "kintsugi/cli.py",
+    "kintsugi/crew/w_rehearsal.py",
+    "kintsugi/demo.py",
+    "kintsugi/senses/store.py",
+    "tests/test_audit_workflow.py",
+    "tests/test_cli.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 40,
+    "cache_creation_tokens": 24682,
+    "cache_read_tokens": 15218033,
+    "output_tokens": 16183,
+    "api_call_count": 20
+  }
+}
