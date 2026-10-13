@@ -169,6 +169,17 @@ def _build_parser() -> argparse.ArgumentParser:
     cfo = econ_sub.add_parser("cfo-export", help="the cfo.ai tabs as files (Ari MCP: A8)")
     cfo.add_argument("--out", type=Path, default=None, help="default business/cfo_export")
 
+    onboard = sub.add_parser("onboard", help="Repair Clinic / OSS onboarding O1–O7 (§7.6)")
+    onboard_sub = onboard.add_subparsers(dest="onboard_command", required=True)
+    oss1 = onboard_sub.add_parser(
+        "rehearse", help="offline OSS-1 rehearsal on the disclosed CRM practice host"
+    )
+    oss1.add_argument("--run", default=None, help="run name (default: oss1-<UTC time>)")
+    oss1.add_argument("--root", type=Path, default=None, help="scratch dir (default: temp)")
+    oss1.add_argument("--seed", type=int, default=1)
+    oss1.add_argument("--limit", type=int, default=24, help="train tasks to run and export")
+    oss1.add_argument("--out", type=Path, default=None, help="evidence JSON")
+
     keys = sub.add_parser("keys", help="attestation key custody (spec §4.5.1)")
     keys_sub = keys.add_subparsers(dest="keys_command", required=True)
     generate = keys_sub.add_parser(
@@ -658,6 +669,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _audit(args)
     if args.command == "econ":
         return _econ(args)
+    if args.command == "onboard":
+        from kintsugi.onboard import rehearsal
+
+        argv_oss1 = ["--seed", str(args.seed), "--limit", str(args.limit)]
+        for flag, value in (("--run", args.run), ("--root", args.root), ("--out", args.out)):
+            if value is not None:
+                argv_oss1 += [flag, str(value)]
+        return rehearsal.main(argv_oss1)
     if args.command == "t0":
         return _t0_check(args)
 
