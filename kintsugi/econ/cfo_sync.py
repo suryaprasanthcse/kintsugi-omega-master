@@ -9,7 +9,8 @@ Architect imports: ``business/cfo_export/`` holds one CSV per tab, each derived 
   observed coverage, the month's incident cost, COGS and gross margin against the floor.
 - ``scenarios.csv``: the same at coverage q ∈ {0.3, 0.7, 0.9} (spec §3.5.5).
 - ``runway.csv``: months of runway from the plan's cash and fixed costs; while either is null
-  the row says so instead of inventing a number.
+  the row says so instead of inventing a number, and while ``company.placeholder`` is true the
+  status says the figures are disclosed placeholders (A-73).
 - ``plan_vs_actual.csv``: per host and month, the planned C_mon and repair pool against the
   actual operating cost and repair-side spend.
 - ``wright.json`` beside them: the nightly learning-curve refit.
@@ -32,6 +33,8 @@ from kintsugi.econ.cortex import BusinessPlan
 
 SCENARIO_Q = (0.3, 0.7, 0.9)
 EXPORT_DIR = Path("business") / "cfo_export"
+PLACEHOLDER_STATUS = ("computed from disclosed PLACEHOLDER cash and fixed costs (A-73), "
+                      "not the Architect's figures")  # fmt: skip
 
 
 def _csv(header: Sequence[str], rows: Sequence[Sequence[Any]]) -> str:
@@ -115,8 +118,9 @@ def runway(plan_data: Mapping[str, Any], plan: BusinessPlan, actuals: Actuals,
                               "business/plan.json"]])  # fmt: skip
     burn = float(fixed) + cogs - revenue
     months = "infinite" if burn <= 0 else f"{float(cash) / burn:.1f}"
+    status = PLACEHOLDER_STATUS if company.get("placeholder") else "computed"
     return _csv(header, [[_money(float(cash)), _money(float(fixed)), _money(revenue),
-                          _money(cogs), _money(burn), months, "computed"]])  # fmt: skip
+                          _money(cogs), _money(burn), months, status]])  # fmt: skip
 
 
 def plan_vs_actual(plan: BusinessPlan, actuals: Actuals) -> str:

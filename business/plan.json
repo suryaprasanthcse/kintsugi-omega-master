@@ -12,9 +12,10 @@
   "days_in_month": 30.0
  },
  "company": {
-  "cash_usd": null,
-  "fixed_costs_usd_month": null,
-  "note": "Runway needs the Architect's cash and fixed costs; until they are set, the runway export says so instead of inventing them."
+  "cash_usd": 250000.0,
+  "fixed_costs_usd_month": 18000.0,
+  "placeholder": true,
+  "note": "PLACEHOLDER (A-73): illustrative seed-stage figures, not the Architect's cash or fixed costs. They exist so runway.csv shows a concrete computation; its status column says placeholder while this flag is true. Replace both figures with the real ones and set placeholder to false."
  },
  "hosts": {
   "ledger": {

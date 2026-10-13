@@ -1,2 +1,2 @@
 cash_usd,fixed_costs_usd_month,revenue_usd_month,cogs_usd_month,net_burn_usd_month,runway_months,status
-,,697.0000,73.2673,,,set company.cash_usd and company.fixed_costs_usd_month in business/plan.json
+250000.0000,18000.0000,697.0000,73.2673,17376.2673,14.4,"computed from disclosed PLACEHOLDER cash and fixed costs (A-73), not the Architect's figures"

@@ -35,7 +35,27 @@ def test_the_committed_export_is_what_the_plan_and_actuals_give() -> None:
     assert triage["meets_floor"] == "yes"
     assert float(triage["gross_margin_pct"]) >= 70.0
     assert len(_rows(files["scenarios.csv"])) == 3 * len(cfo_sync.SCENARIO_Q)
-    assert "set company.cash_usd" in _rows(files["runway.csv"])[0]["status"]
+    runway = _rows(files["runway.csv"])[0]
+    assert runway["status"] == cfo_sync.PLACEHOLDER_STATUS  # A-73: disclosed, not the Architect's
+    burn = 18000.0 + float(runway["cogs_usd_month"]) - 697.0
+    assert float(runway["net_burn_usd_month"]) == pytest.approx(burn, abs=1e-3)
+    assert float(runway["runway_months"]) == pytest.approx(250000.0 / burn, abs=0.05)
+
+
+def test_the_committed_plan_labels_its_company_figures_as_placeholders() -> None:
+    company = json.loads(PLAN.read_text(encoding="utf-8"))["company"]
+    assert company["placeholder"] is True
+    assert "PLACEHOLDER (A-73)" in company["note"]
+
+
+def test_runway_without_cash_or_fixed_costs_says_so() -> None:
+    data = json.loads(PLAN.read_text(encoding="utf-8"))
+    data["company"] = {"cash_usd": None, "fixed_costs_usd_month": None}
+    plan = BusinessPlan.from_json(data)
+    actuals = Actuals.load(REPO / "business" / "actuals.json")
+    row = _rows(cfo_sync.runway(data, plan, actuals, None))[0]
+    assert "set company.cash_usd" in row["status"]
+    assert row["runway_months"] == ""
 
 
 def test_runway_is_computed_only_from_the_architects_numbers() -> None:
