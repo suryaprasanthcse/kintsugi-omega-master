@@ -7,7 +7,11 @@ Architect imports: ``business/cfo_export/`` holds one CSV per tab, each derived 
 - ``unit_economics.csv``: per host, price, C_mon, the observed primary and secondary response
   costs (c_p, c_s) with their sample sizes and phase, E[C] = q·c_s + (1 − q)·c_p at the
   observed coverage, the month's incident cost, COGS and gross margin against the floor.
-- ``scenarios.csv``: the same at coverage q ∈ {0.3, 0.7, 0.9} (spec §3.5.5).
+- ``coverage_scenarios.csv``: the same at coverage q ∈ {0.3, 0.7, 0.9} (spec §3.5.5).
+- ``scenarios.csv``: the §10 runway scenarios (Base +25%/month, Growth +40%/month, Network
+  +25%/month with +0.10 coverage and 15% of incidents prevented): month-6 and month-12 hosts and
+  gross margin, breakeven month, lowest cash and its month, runway, cash at the horizon
+  (``kintsugi.econ.scenarios``); ``scenario_months.csv`` holds every month of each.
 - ``runway.csv``: months of runway from the plan's cash and fixed costs; while either is null
   the row says so instead of inventing a number, and while ``company.placeholder`` is true the
   status says the figures are disclosed placeholders (A-73).
@@ -28,6 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from kintsugi.econ import governor, wright
+from kintsugi.econ import scenarios as scenario_engine
 from kintsugi.econ.actuals import Actuals
 from kintsugi.econ.cortex import BusinessPlan
 
@@ -101,6 +106,48 @@ def scenarios(plan: BusinessPlan, actuals: Actuals, phase: str | None) -> str:
     return _csv(header, rows)
 
 
+def growth_scenarios(plan_data: Mapping[str, Any]) -> tuple[str, str]:
+    """``scenarios.csv`` and ``scenario_months.csv`` (§10) from the plan's drivers and its
+    company cash and fixed costs; without them each file says what to set."""
+    company = plan_data.get("company") or {}
+    cash, fixed = company.get("cash_usd"), company.get("fixed_costs_usd_month")
+    block = plan_data.get("scenarios")
+    header = ("scenario", "growth_pct", "q_uplift", "vaccination", "outcome_fee_usd",
+              "month6_hosts", "month6_gm_pct", "month12_hosts", "month12_gm_pct",
+              "breakeven_month", "lowest_cash_usd", "lowest_cash_month", "runway_months",
+              "cash_at_horizon_usd", "horizon_months", "status")  # fmt: skip
+    month_header = ("scenario", "month", "hosts", "coverage_q", "expected_incident_cost_usd",
+                    "cogs_per_host_usd", "gross_margin_pct", "revenue_usd", "gross_profit_usd",
+                    "net_burn_usd", "cash_usd")  # fmt: skip
+    if not block or cash is None or fixed is None:
+        missing = "the scenarios block" if not block else "company.cash_usd and fixed costs"
+        row = [""] * (len(header) - 1) + [f"set {missing} in business/plan.json"]
+        return _csv(header, [row]), _csv(month_header, [])
+    status = PLACEHOLDER_STATUS if company.get("placeholder") else "computed"
+    summaries, months = scenario_engine.run(scenario_engine.Drivers.from_json(block),
+                                            float(cash), float(fixed))  # fmt: skip
+
+    def cell(value: Any, money: bool = False) -> str:
+        if value is None:
+            return "none within horizon"
+        if isinstance(value, float):
+            return _money(value) if money else f"{value:.2f}"
+        return str(value)
+
+    rows = [[s["scenario"], cell(s["growth_pct"]), cell(s["q_uplift"]), cell(s["vaccination"]),
+             cell(s["outcome_fee_usd"]), cell(s["month6_hosts"]), cell(s["month6_gm_pct"]),
+             cell(s["month12_hosts"]), cell(s["month12_gm_pct"]), cell(s["breakeven_month"]),
+             cell(s["lowest_cash_usd"], True), cell(s["lowest_cash_month"]),
+             cell(s["runway_months"]), cell(s["cash_at_horizon_usd"], True),
+             cell(s["horizon_months"]), status] for s in summaries]  # fmt: skip
+    monthly = [[m["scenario"], m["month"], m["hosts"], f"{m['coverage_q']:.4f}",
+                _money(m["expected_incident_cost_usd"]), _money(m["cogs_per_host_usd"]),
+                f"{m['gross_margin_pct']:.2f}", _money(m["revenue_usd"]),
+                _money(m["gross_profit_usd"]), _money(m["net_burn_usd"]),
+                _money(m["cash_usd"])] for m in months]  # fmt: skip
+    return _csv(header, rows), _csv(month_header, monthly)
+
+
 def runway(plan_data: Mapping[str, Any], plan: BusinessPlan, actuals: Actuals,
            phase: str | None) -> str:  # fmt: skip
     company = plan_data.get("company") or {}
@@ -160,9 +207,12 @@ def export(plan_path: Path, actuals: Actuals) -> dict[str, str]:
     meta = {"business_plan_sha": plan.sha, "cost_phase": phase or "all (rehearsal only)",
             "observed_coverage_q": round(observed_coverage(actuals, phase), 6),
             "unit_costs": actuals.unit_costs(phase=phase)}  # fmt: skip
+    growth = growth_scenarios(data)
     return {
         "unit_economics.csv": unit_economics(plan, actuals, phase),
-        "scenarios.csv": scenarios(plan, actuals, phase),
+        "coverage_scenarios.csv": scenarios(plan, actuals, phase),
+        "scenarios.csv": growth[0],
+        "scenario_months.csv": growth[1],
         "runway.csv": runway(data, plan, actuals, phase),
         "plan_vs_actual.csv": plan_vs_actual(plan, actuals),
         "wright.json": json.dumps(learning_curve(actuals), indent=1, sort_keys=True) + "\n",

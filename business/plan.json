@@ -17,6 +17,22 @@
   "placeholder": true,
   "note": "PLACEHOLDER (A-73): illustrative seed-stage figures, not the Architect's cash or fixed costs. They exist so runway.csv shows a concrete computation; its status column says placeholder while this flag is true. Replace both figures with the real ones and set placeholder to false."
  },
+ "scenarios": {
+  "note": "Runway scenarios (spec §10): the blueprint's [I] drivers (§3.5.5) until nightly actuals replace them (§4.6.5); cash and fixed costs come from company above.",
+  "starting_hosts": 10,
+  "price_usd_month": 299.0,
+  "c_mon_usd_month": 18.0,
+  "incidents_per_host_month": 8.0,
+  "c_primary_usd": 14.0,
+  "c_secondary_usd": 1.6,
+  "horizon_months": 24,
+  "coverage": [[10, 0.30], [100, 0.70], [1000, 0.90]],
+  "scenarios": [
+   {"name": "Base", "growth": 0.25},
+   {"name": "Growth", "growth": 0.40},
+   {"name": "Network", "growth": 0.25, "q_uplift": 0.10, "vaccination": 0.15}
+  ]
+ },
  "hosts": {
   "ledger": {
    "tier": "Team",

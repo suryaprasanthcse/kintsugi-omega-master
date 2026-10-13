@@ -34,7 +34,12 @@ def test_the_committed_export_is_what_the_plan_and_actuals_give() -> None:
     triage = next(r for r in _rows(files["unit_economics.csv"]) if r["host"] == "triage")
     assert triage["meets_floor"] == "yes"
     assert float(triage["gross_margin_pct"]) >= 70.0
-    assert len(_rows(files["scenarios.csv"])) == 3 * len(cfo_sync.SCENARIO_Q)
+    assert len(_rows(files["coverage_scenarios.csv"])) == 3 * len(cfo_sync.SCENARIO_Q)
+    growth = {r["scenario"]: r for r in _rows(files["scenarios.csv"])}
+    assert sorted(growth) == ["Base", "Growth", "Network"]
+    assert all(r["status"] == cfo_sync.PLACEHOLDER_STATUS for r in growth.values())
+    assert growth["Base"]["month12_hosts"] == "116"
+    assert len(_rows(files["scenario_months.csv"])) == 3 * 24
     runway = _rows(files["runway.csv"])[0]
     assert runway["status"] == cfo_sync.PLACEHOLDER_STATUS  # A-73: disclosed, not the Architect's
     burn = 18000.0 + float(runway["cogs_usd_month"]) - 697.0

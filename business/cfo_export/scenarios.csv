@@ -1,10 +1,4 @@
-host,coverage_q,expected_incident_cost_usd,incident_cost_month_usd,cogs_month_usd,gross_margin_pct
-ledger,0.3,0.8862,3.5449,33.5449,88.8
-ledger,0.7,0.4351,1.7404,31.7404,89.4
-ledger,0.9,0.2095,0.8381,30.8381,89.7
-scout,0.3,0.8862,3.5449,33.5449,88.8
-scout,0.7,0.4351,1.7404,31.7404,89.4
-scout,0.9,0.2095,0.8381,30.8381,89.7
-triage,0.3,0.8862,2.6587,8.6587,91.3
-triage,0.7,0.4351,1.3053,7.3053,92.6
-triage,0.9,0.2095,0.6286,6.6286,93.3
+scenario,growth_pct,q_uplift,vaccination,outcome_fee_usd,month6_hosts,month6_gm_pct,month12_hosts,month12_gm_pct,breakeven_month,lowest_cash_usd,lowest_cash_month,runway_months,cash_at_horizon_usd,horizon_months,status
+Base,25.00,0.00,0.00,0.00,31,73.00,116,80.17,11,144387.0740,10,none within horizon,1955894.3802,24,"computed from disclosed PLACEHOLDER cash and fixed costs (A-73), not the Architect's figures"
+Growth,40.00,0.00,0.00,0.00,54,76.19,405,83.78,8,177134.8183,7,none within horizon,20539674.7985,24,"computed from disclosed PLACEHOLDER cash and fixed costs (A-73), not the Architect's figures"
+Network,25.00,0.10,0.15,0.00,31,78.96,116,85.06,10,149445.2460,9,none within horizon,2058131.5376,24,"computed from disclosed PLACEHOLDER cash and fixed costs (A-73), not the Architect's figures"
