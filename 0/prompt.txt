@@ -1,0 +1,12 @@
+delete the 04:45 resume scheduled task
+
+---
+
+<pasted_content id="7e03">
+Before I close this 642k-token session and open a fresh `+ New` chat in `C:\myspace\hacckathons\kintsugi-omega-master`, do a quick read/memory-only handoff sync (do NOT run the test suite):
+
+1. Save to your persistent memory and update `MASTER_HANDOFF.md` (only if not already recorded) with:
+   - Exact current HEAD (`265681e`), 944 passing tests (901 + 43 in Wave D), and summary of the 15 overnight commits (`e90b437`..`265681e`) across Waves A (`13a` runtime), B (`Stage 9` econ), C (`Stage 12` self-repair), and D (`Stage 10/11` offline).
+   - Delete `C:\Users\surya\.claude\scheduled-tasks\kintsugi-overnight-resume` if the prompt file is no longer needed, and restore Windows AC standby/hibernate timeouts to normal (`30` minutes).
+2. Output a concise 10-line summary of the exact remaining pure-code/offline tasks (`business/plan.json` cash & fixed-cost defaults for runway calculation, local fixture onboarding run for `OSS-1`, and `arena/` board UI) so I can start the fresh session immediately.
+</pasted_content id="7e03">
