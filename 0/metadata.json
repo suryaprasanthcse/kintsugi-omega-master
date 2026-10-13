@@ -1,0 +1,81 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4THH4V82TBCYPV2NEANFVYK",
+  "session_id": "31f65c63-a11e-49e2-aa32-0e76d95c8a8d",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-13T11:49:26.5326598Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "MASTER_HANDOFF.md",
+    "README.md",
+    "docs/EXECUTION_PLAN.md",
+    "docs/VERIFICATION.md",
+    "kintsugi/cli.py",
+    "kintsugi/control/activities.py",
+    "kintsugi/control/contracts.py",
+    "kintsugi/control/service.py",
+    "kintsugi/control/workflows.py",
+    "kintsugi/crew/bundler.py",
+    "kintsugi/crew/casefile.py",
+    "kintsugi/crew/factory.py",
+    "kintsugi/crew/healer.py",
+    "kintsugi/crew/runtime.py",
+    "kintsugi/crew/saboteur.py",
+    "kintsugi/crew/telemetry.py",
+    "kintsugi/proof/audit.py",
+    "kintsugi/senses/drift.py",
+    "scripts/w-runtime.sh",
+    "tests/control/test_main_watch.py",
+    "tests/crew/test_crew_handlers.py",
+    "tests/crew/test_crew_telemetry.py",
+    "tests/crew/test_healer_port.py",
+    "tests/crew/test_proof_bundle_emission.py",
+    "tests/helpers/control.py"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-opus-5-5",
+  "turn_id": "90a986af0bb5",
+  "checkpoint_transcript_start": 960,
+  "transcript_lines_at_start": 960,
+  "compact_transcript_start": 121,
+  "token_usage": {
+    "input_tokens": 36,
+    "cache_creation_tokens": 39485,
+    "cache_read_tokens": 6705585,
+    "output_tokens": 18520,
+    "api_call_count": 17
+  },
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-13T11:49:26.4312281Z",
+    "agent_lines": 6,
+    "agent_removed": 6,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 6,
+    "total_lines_changed": 12,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1625,
+      "agent_lines_removed": 40
+    }
+  ]
+}

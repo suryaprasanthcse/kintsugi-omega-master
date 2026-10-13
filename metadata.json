@@ -1,0 +1,50 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4THH4V82TBCYPV2NEANFVYK",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "MASTER_HANDOFF.md",
+    "README.md",
+    "docs/EXECUTION_PLAN.md",
+    "docs/VERIFICATION.md",
+    "kintsugi/cli.py",
+    "kintsugi/control/activities.py",
+    "kintsugi/control/contracts.py",
+    "kintsugi/control/service.py",
+    "kintsugi/control/workflows.py",
+    "kintsugi/crew/bundler.py",
+    "kintsugi/crew/casefile.py",
+    "kintsugi/crew/factory.py",
+    "kintsugi/crew/healer.py",
+    "kintsugi/crew/runtime.py",
+    "kintsugi/crew/saboteur.py",
+    "kintsugi/crew/telemetry.py",
+    "kintsugi/proof/audit.py",
+    "kintsugi/senses/drift.py",
+    "scripts/w-runtime.sh",
+    "tests/control/test_main_watch.py",
+    "tests/crew/test_crew_handlers.py",
+    "tests/crew/test_crew_telemetry.py",
+    "tests/crew/test_healer_port.py",
+    "tests/crew/test_proof_bundle_emission.py",
+    "tests/helpers/control.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 36,
+    "cache_creation_tokens": 39485,
+    "cache_read_tokens": 6705585,
+    "output_tokens": 18520,
+    "api_call_count": 17
+  }
+}
