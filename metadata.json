@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4T4FRPD33FTK9KY1R17XDXH",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "kintsugi/control/activities.py",
+    "kintsugi/control/dbconn.py",
+    "kintsugi/control/surgeon_step.py",
+    "kintsugi/crew/context.py",
+    "tests/control/test_dbconn.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 26,
+    "cache_creation_tokens": 21070,
+    "cache_read_tokens": 9013939,
+    "output_tokens": 12019,
+    "api_call_count": 13
+  }
+}
