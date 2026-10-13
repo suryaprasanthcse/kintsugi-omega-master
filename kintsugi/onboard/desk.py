@@ -17,9 +17,10 @@ The steps (offline; nothing leaves the machine):
   and kept as ``instrument.patch``.
 - **O4 Entire**: ``entire graph snapshot`` of the sandbox: files, symbols, relations (skipped,
   and saying so, without entire-graph).
-- **O5 Eval synthesis**: seed evals from the exported traces' failures, the checkout's existing
-  tests, README examples and doctest docstrings; a deterministic 70/30 train/holdout split and
-  the holdout manifest's sha256.
+- **O5 Eval synthesis**: seed evals from the exported traces' true failures (transient retries
+  the agent recovered from are listed, never seeded), the checkout's existing tests, README
+  examples and doctest docstrings; a deterministic 70/30 train/holdout split and the holdout
+  manifest's sha256.
 - **O6 Baseline**: pass rate with its Wilson interval, cost and p95 duration of the exported
   traces (replay mode: they are read like live traces).
 - **O7 Immune scan**: every ACTIVE antibody motif against the sandbox's graph; the receipt's
@@ -310,7 +311,8 @@ class OnboardingDesk:
             kinds[case_["kind"]] = kinds.get(case_["kind"], 0) + 1
         return {"cases": len(cases), "kinds": dict(sorted(kinds.items())),
                 "train": len(train), "holdout": len(holdout),
-                "holdout_manifest": manifest_sha(holdout), "seeds": seeds}  # fmt: skip
+                "holdout_manifest": manifest_sha(holdout), "seeds": seeds,
+                "transient_retries": eval_synth.transient(records)}  # fmt: skip
 
     def _baseline(self, case: OnboardingCase, folder: Path) -> dict[str, Any]:
         records = self._records(case)

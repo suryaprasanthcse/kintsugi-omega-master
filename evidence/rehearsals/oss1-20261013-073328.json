@@ -1,0 +1,350 @@
+{
+ "checkout": {
+  "sha256": "4a18a6e674ddc45d4bd9dca01af857b8ee51909cbb83b099117bf81cdb592f9e",
+  "source": "tests/fixtures/rehearsal/crm_practice"
+ },
+ "disclosed": [
+  "OSS-1 is not chosen yet: the checkout is a disposable copy of the disclosed CRM practice host (A-61), not an open-source repository",
+  "the intake names a fictional repository slug that is never contacted",
+  "the exported traces are captured locally from the practice host behind a local fabric (stress profile, offline model): no neatlogs project exists for it"
+ ],
+ "duration_s": 19.7,
+ "exports": {
+  "export_sha256": "69b9a063da7e4bcdf0ca66b12f5d63cd12ecbb6b568435f9ef0eadffa38f8f77",
+  "metered_cost_usd": 0.0752,
+  "model_mode": "offline",
+  "priced_traces": 24,
+  "profile": "profiles/stress.yaml",
+  "seed": 1,
+  "tasks": 24,
+  "traces": 24,
+  "verdicts": {
+   "FAIL:DUPLICATE_CONTACT": 10,
+   "FAIL:RATE_LIMITED": 11,
+   "PASS": 3
+  }
+ },
+ "intake": {
+  "fixture": "tests/fixtures/rehearsal/oss1/intake.md",
+  "sha256": "fddaeb53f0a4b9c49c129996301414256ae541e5cc951d1df593b790923e5a83"
+ },
+ "kind": "onboarding-rehearsal",
+ "model": "offline (A-23)",
+ "network": {
+  "foreign_posts": 0,
+  "non_loopback_connections_refused": 0,
+  "ports": "none: no GitHub, neatlogs or cfo.ai client is constructed by the rehearsal",
+  "refused": []
+ },
+ "onboarding": {
+  "O1_intake": {
+   "consents": 5,
+   "entry_point": "practice_crm/agent.py",
+   "foreign": true,
+   "model_provider": "none (the practice sync makes no model calls)",
+   "ok": true,
+   "pr_only": true,
+   "repo": "kintsugi-practice/crm-practice",
+   "run_command": "python -m hostkit.evalrun --host practice_crm --split train"
+  },
+  "O2_sandbox": {
+   "entry_point_found": true,
+   "files": 20,
+   "install": {
+    "reason": "no sandbox runner configured (offline)",
+    "status": "not run"
+   },
+   "manifests": [
+    "pyproject.toml"
+   ],
+   "ok": true,
+   "sandbox": "<run>/cases/crm-practice/sandbox",
+   "source_sha256": "4a18a6e674ddc45d4bd9dca01af857b8ee51909cbb83b099117bf81cdb592f9e"
+  },
+  "O3_instrument": {
+   "health_card": {
+    "ci": true,
+    "http_calls": [
+     "practice_crm/tools.py:24 GET external.call",
+     "practice_crm/tools.py:35 POST external.call",
+     "practice_crm/tools.py:42 GET external.call"
+    ],
+    "model_calls": 0,
+    "model_imports": [],
+    "neatlogs_init": true,
+    "needs": [
+     "no model client found: confirm the agent's entry point"
+    ],
+    "python_files": 13,
+    "retry_wrappers": [
+     "practice_crm/retry.py:retry_with_backoff"
+    ],
+    "side_effecting_http": [
+     "practice_crm/tools.py:35 external.call"
+    ],
+    "side_effecting_tools": [
+     "practice_crm/tools.py:create_contact"
+    ],
+    "tests": true,
+    "tools": [
+     "practice_crm/tools.py:enrich",
+     "practice_crm/tools.py:create_contact",
+     "practice_crm/tools.py:list_contacts"
+    ]
+   },
+   "ok": true,
+   "patched": false
+  },
+  "O4_entire": {
+   "files": 20,
+   "ok": true,
+   "relations": 255,
+   "status": "indexed",
+   "symbols": 76
+  },
+  "O5_evals": {
+   "cases": 24,
+   "holdout": 8,
+   "holdout_manifest": "sha256:bc4166e800c7317f4c34eaad3adf257ad179956d315c71eea6bca6910dc17020",
+   "kinds": {
+    "existing-test": 3,
+    "trace-failure": 21
+   },
+   "ok": true,
+   "seeds": [
+    {
+     "expected_failure": "FAIL:DUPLICATE_CONTACT",
+     "id": "seed-05a9d512898c",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'initech.test', 'name': 'Alan Hopper'}, {'domain': 'tyrell.example', 'name': 'Barbara Dijkstra'}, {'domain': 'globex.test', 'name': 'Alan Dijkstra'}], 'ref': 'CT-015'}, 'gold': {'contacts': [{'key': 'CT-015#1', 'name': 'Alan Hopper', 'region': 'AMER-East'}, {'key': 'CT-015#2', 'name': 'Barbara Dijkstra', 'region': 'EMEA'}, {'key': 'CT-015#3', 'name': 'Alan Dijkstra', 'region': 'APAC'}]}, 'id': 'CT-015'}}",
+     "kind": "trace-failure",
+     "source_trace": "05a9d512898ced5810343938a05e9eaa",
+     "task_id": "CT-015"
+    },
+    {
+     "expected_failure": "FAIL:RATE_LIMITED",
+     "id": "seed-11e67407c8d9",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'wonka.example', 'name': 'Ada Allen'}, {'domain': 'tyrell.example', 'name': 'Ada Dijkstra'}, {'domain': 'vandelay.test', 'name': 'Donald Thompson'}, {'domain': 'cyberdyne.example', 'name': 'Alan Hopper'}], 'ref': 'CT-010'}, 'gold': {'contacts': [{'key': 'CT-010#1', 'name': 'Ada Allen', 'region': 'LATAM'}, {'key': 'CT-010#2', 'name': 'Ada Dijkstra', 'region': 'EMEA'}, {'key': 'CT-010#3', 'name': 'Donald Thompson', 'region': 'APAC'}, {'key': 'CT-010#4', 'name': 'Alan Hopper', 'region': 'AMER-East'}]}, 'id': 'CT-010'}}",
+     "kind": "trace-failure",
+     "source_trace": "11e67407c8d98c91d25b030854cd64d8",
+     "task_id": "CT-010"
+    },
+    {
+     "expected_failure": "FAIL:DUPLICATE_CONTACT",
+     "id": "seed-1694911bb670",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'vandelay.invalid', 'name': 'Frances Allen'}, {'domain': 'globex.invalid', 'name': 'Edsger Liskov'}, {'domain': 'tyrell.example', 'name': 'Grace Dijkstra'}], 'ref': 'CT-022'}, 'gold': {'contacts': [{'key': 'CT-022#1', 'name': 'Frances Allen', 'region': 'EMEA'}, {'key': 'CT-022#2', 'name': 'Edsger Liskov', 'region': 'EMEA'}, {'key': 'CT-022#3', 'name': 'Grace Dijkstra', 'region': 'EMEA'}]}, 'id': 'CT-022'}}",
+     "kind": "trace-failure",
+     "source_trace": "1694911bb670ffa11cad99c9b2c6f67a",
+     "task_id": "CT-022"
+    },
+    {
+     "expected_failure": "FAIL:RATE_LIMITED",
+     "id": "seed-2f0f1e08ae8a",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'acme.invalid', 'name': 'Barbara Turing'}, {'domain': 'globex.invalid', 'name': 'Grace Knuth'}, {'domain': 'stark.example', 'name': 'Donald Hopper'}, {'domain': 'wonka.invalid', 'name': 'Edsger Hopper'}, {'domain': 'globex.example', 'name': 'Frances Hopper'}, {'domain': 'umbrella.test', 'name': 'Tim Hopper'}], 'ref': 'CT-021'}, 'gold': {'contacts': [{'key': 'CT-021#1', 'name': 'Barbara Turing', 'region': 'AMER-East'}, {'key': 'CT-021#2', 'name': 'Grace Knuth', 'region': 'EMEA'}, {'key': 'CT-021#3', 'name': 'Donald Hopper', 'region': 'APAC'}, {'key': 'CT-021#4', 'name': 'Edsger Hopper', 'region': 'EMEA'}, {'key': 'CT-021#5', 'name': 'Frances Hopper', 'region': 'EMEA'}, {'key': 'CT-021#6', 'name': 'Tim Hopper', 'region': 'APAC'}]}, 'id': 'CT-021'}}",
+     "kind": "trace-failure",
+     "source_trace": "2f0f1e08ae8a62cf27567e288132c254",
+     "task_id": "CT-021"
+    },
+    {
+     "expected_failure": "FAIL:DUPLICATE_CONTACT",
+     "id": "seed-3b2628f0569d",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'vandelay.example', 'name': 'Grace Lovelace'}, {'domain': 'hooli.example', 'name': 'Ken Turing'}, {'domain': 'wonka.invalid', 'name': 'Tim Turing'}, {'domain': 'cyberdyne.example', 'name': 'Ken Turing'}], 'ref': 'CT-012'}, 'gold': {'contacts': [{'key': 'CT-012#1', 'name': 'Grace Lovelace', 'region': 'EMEA'}, {'key': 'CT-012#2', 'name': 'Ken Turing', 'region': 'AMER-East'}, {'key': 'CT-012#3', 'name': 'Tim Turing', 'region': 'EMEA'}, {'key': 'CT-012#4', 'name': 'Ken Turing', 'region': 'AMER-East'}]}, 'id': 'CT-012'}}",
+     "kind": "trace-failure",
+     "source_trace": "3b2628f0569dda7bb2e75850316d7c3e",
+     "task_id": "CT-012"
+    },
+    {
+     "expected_failure": "FAIL:DUPLICATE_CONTACT",
+     "id": "seed-5b0350fa98b2",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'initech.invalid', 'name': 'Radia Lovelace'}, {'domain': 'globex.example', 'name': 'Radia Lovelace'}, {'domain': 'wayne.invalid', 'name': 'Grace Thompson'}], 'ref': 'CT-024'}, 'gold': {'contacts': [{'key': 'CT-024#1', 'name': 'Radia Lovelace', 'region': 'AMER-West'}, {'key': 'CT-024#2', 'name': 'Radia Lovelace', 'region': 'EMEA'}, {'key': 'CT-024#3', 'name': 'Grace Thompson', 'region': 'EMEA'}]}, 'id': 'CT-024'}}",
+     "kind": "trace-failure",
+     "source_trace": "5b0350fa98b2722a64869f0cace660e8",
+     "task_id": "CT-024"
+    },
+    {
+     "expected_failure": "FAIL:RATE_LIMITED",
+     "id": "seed-658215d04ff2",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'hooli.invalid', 'name': 'Alan Knuth'}, {'domain': 'wayne.example', 'name': 'Edsger Dijkstra'}, {'domain': 'soylent.example', 'name': 'Ada Allen'}, {'domain': 'wayne.example', 'name': 'Barbara Lovelace'}], 'ref': 'CT-003'}, 'gold': {'contacts': [{'key': 'CT-003#1', 'name': 'Alan Knuth', 'region': 'AMER-East'}, {'key': 'CT-003#2', 'name': 'Edsger Dijkstra', 'region': 'APAC'}, {'key': 'CT-003#3', 'name': 'Ada Allen', 'region': 'AMER-West'}, {'key': 'CT-003#4', 'name': 'Barbara Lovelace', 'region': 'APAC'}]}, 'id': 'CT-003'}}",
+     "kind": "trace-failure",
+     "source_trace": "658215d04ff20f25ce6d5c7f53aab50f",
+     "task_id": "CT-003"
+    },
+    {
+     "expected_failure": "FAIL:RATE_LIMITED",
+     "id": "seed-688bf1772741",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'umbrella.example', 'name': 'Donald Liskov'}, {'domain': 'wonka.invalid', 'name': 'Radia Turing'}, {'domain': 'soylent.test', 'name': 'Alan Dijkstra'}, {'domain': 'globex.example', 'name': 'Ken Lovelace'}, {'domain': 'initech.example', 'name': 'Ken Dijkstra'}], 'ref': 'CT-013'}, 'gold': {'contacts': [{'key': 'CT-013#1', 'name': 'Donald Liskov', 'region': 'EMEA'}, {'key': 'CT-013#2', 'name': 'Radia Turing', 'region': 'EMEA'}, {'key': 'CT-013#3', 'name': 'Alan Dijkstra', 'region': 'LATAM'}, {'key': 'CT-013#4', 'name': 'Ken Lovelace', 'region': 'EMEA'}, {'key': 'CT-013#5', 'name': 'Ken Dijkstra', 'region': 'AMER-East'}]}, 'id': 'CT-013'}}",
+     "kind": "trace-failure",
+     "source_trace": "688bf1772741b09b93cdf12a9fc23422",
+     "task_id": "CT-013"
+    },
+    {
+     "expected_failure": "FAIL:DUPLICATE_CONTACT",
+     "id": "seed-733b8a2fae31",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'initech.invalid', 'name': 'Donald Dijkstra'}, {'domain': 'wonka.test', 'name': 'Ken Lovelace'}, {'domain': 'initech.invalid', 'name': 'Barbara Liskov'}], 'ref': 'CT-017'}, 'gold': {'contacts': [{'key': 'CT-017#1', 'name': 'Donald Dijkstra', 'region': 'AMER-West'}, {'key': 'CT-017#2', 'name': 'Ken Lovelace', 'region': 'AMER-West'}, {'key': 'CT-017#3', 'name': 'Barbara Liskov', 'region': 'AMER-West'}]}, 'id': 'CT-017'}}",
+     "kind": "trace-failure",
+     "source_trace": "733b8a2fae31f13a126832b468d951c1",
+     "task_id": "CT-017"
+    },
+    {
+     "expected_failure": "FAIL:DUPLICATE_CONTACT",
+     "id": "seed-8282133782ea",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'vandelay.example', 'name': 'Tim Lovelace'}, {'domain': 'cyberdyne.test', 'name': 'Edsger Knuth'}, {'domain': 'vandelay.example', 'name': 'Grace Dijkstra'}], 'ref': 'CT-008'}, 'gold': {'contacts': [{'key': 'CT-008#1', 'name': 'Tim Lovelace', 'region': 'EMEA'}, {'key': 'CT-008#2', 'name': 'Edsger Knuth', 'region': 'LATAM'}, {'key': 'CT-008#3', 'name': 'Grace Dijkstra', 'region': 'EMEA'}]}, 'id': 'CT-008'}}",
+     "kind": "trace-failure",
+     "source_trace": "8282133782ea32051b4a1c6855bd0c9c",
+     "task_id": "CT-008"
+    },
+    {
+     "expected_failure": "FAIL:DUPLICATE_CONTACT",
+     "id": "seed-83122d955e31",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'umbrella.invalid', 'name': 'Alan Lovelace'}, {'domain': 'wayne.invalid', 'name': 'Tim Knuth'}, {'domain': 'wonka.test', 'name': 'Donald Liskov'}, {'domain': 'stark.invalid', 'name': 'Radia Turing'}, {'domain': 'cyberdyne.example', 'name': 'Tim Lovelace'}, {'domain': 'acme.test', 'name': 'Alan Liskov'}], 'ref': 'CT-014'}, 'gold': {'contacts': [{'key': 'CT-014#1', 'name': 'Alan Lovelace', 'region': 'AMER-East'}, {'key': 'CT-014#2', 'name': 'Tim Knuth', 'region': 'EMEA'}, {'key': 'CT-014#3', 'name': 'Donald Liskov', 'region': 'AMER-West'}, {'key': 'CT-014#4', 'name': 'Radia Turing', 'region': 'AMER-West'}, {'key': 'CT-014#5', 'name': 'Tim Lovelace', 'region': 'AMER-East'}, {'key': 'CT-014#6', 'name': 'Alan Liskov', 'region': 'LATAM'}]}, 'id': 'CT-014'}}",
+     "kind": "trace-failure",
+     "source_trace": "83122d955e314c65135bf6064e609c2d",
+     "task_id": "CT-014"
+    },
+    {
+     "expected_failure": "FAIL:RATE_LIMITED",
+     "id": "seed-911097be826d",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'stark.test', 'name': 'Ken Liskov'}, {'domain': 'wayne.invalid', 'name': 'Tim Allen'}, {'domain': 'acme.test', 'name': 'Frances Knuth'}, {'domain': 'initech.test', 'name': 'Tim Thompson'}, {'domain': 'tyrell.test', 'name': 'Ken Liskov'}], 'ref': 'CT-018'}, 'gold': {'contacts': [{'key': 'CT-018#1', 'name': 'Ken Liskov', 'region': 'APAC'}, {'key': 'CT-018#2', 'name': 'Tim Allen', 'region': 'EMEA'}, {'key': 'CT-018#3', 'name': 'Frances Knuth', 'region': 'LATAM'}, {'key': 'CT-018#4', 'name': 'Tim Thompson', 'region': 'AMER-East'}, {'key': 'CT-018#5', 'name': 'Ken Liskov', 'region': 'APAC'}]}, 'id': 'CT-018'}}",
+     "kind": "trace-failure",
+     "source_trace": "911097be826d981823a4a890af96ccea",
+     "task_id": "CT-018"
+    },
+    {
+     "expected_failure": "FAIL:RATE_LIMITED",
+     "id": "seed-9be17ea0a426",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'umbrella.example', 'name': 'Radia Turing'}, {'domain': 'wonka.test', 'name': 'Frances Thompson'}, {'domain': 'stark.example', 'name': 'Ada Dijkstra'}, {'domain': 'cyberdyne.example', 'name': 'Alan Turing'}, {'domain': 'umbrella.test', 'name': 'Frances Dijkstra'}, {'domain': 'umbrella.invalid', 'name': 'Ada Dijkstra'}], 'ref': 'CT-001'}, 'gold': {'contacts': [{'key': 'CT-001#1', 'name': 'Radia Turing', 'region': 'EMEA'}, {'key': 'CT-001#2', 'name': 'Frances Thompson', 'region': 'AMER-West'}, {'key': 'CT-001#3', 'name': 'Ada Dijkstra', 'region': 'APAC'}, {'key': 'CT-001#4', 'name': 'Alan Turing', 'region': 'AMER-East'}, {'key': 'CT-001#5', 'name': 'Frances Dijkstra', 'region': 'APAC'}, {'key': 'CT-001#6', 'name': 'Ada Dijkstra', 'region': 'AMER-East'}]}, 'id': 'CT-001'}}",
+     "kind": "trace-failure",
+     "source_trace": "9be17ea0a426932f6e0387881d4625bf",
+     "task_id": "CT-001"
+    },
+    {
+     "expected_failure": "FAIL:RATE_LIMITED",
+     "id": "seed-a4fca511099f",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'acme.example', 'name': 'Donald Lovelace'}, {'domain': 'vandelay.test', 'name': 'Donald Knuth'}, {'domain': 'cyberdyne.invalid', 'name': 'Radia Hopper'}, {'domain': 'stark.example', 'name': 'Tim Dijkstra'}, {'domain': 'tyrell.test', 'name': 'Frances Liskov'}], 'ref': 'CT-020'}, 'gold': {'contacts': [{'key': 'CT-020#1', 'name': 'Donald Lovelace', 'region': 'LATAM'}, {'key': 'CT-020#2', 'name': 'Donald Knuth', 'region': 'APAC'}, {'key': 'CT-020#3', 'name': 'Radia Hopper', 'region': 'AMER-East'}, {'key': 'CT-020#4', 'name': 'Tim Dijkstra', 'region': 'APAC'}, {'key': 'CT-020#5', 'name': 'Frances Liskov', 'region': 'APAC'}]}, 'id': 'CT-020'}}",
+     "kind": "trace-failure",
+     "source_trace": "a4fca511099f648fcb9317d44a2ad42f",
+     "task_id": "CT-020"
+    },
+    {
+     "expected_failure": "FAIL:DUPLICATE_CONTACT",
+     "id": "seed-a88ed39b880f",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'umbrella.invalid', 'name': 'Donald Lovelace'}, {'domain': 'initech.test', 'name': 'Grace Allen'}, {'domain': 'initech.invalid', 'name': 'Edsger Liskov'}, {'domain': 'vandelay.example', 'name': 'Frances Allen'}, {'domain': 'wayne.example', 'name': 'Frances Allen'}, {'domain': 'wonka.invalid', 'name': 'Tim Allen'}], 'ref': 'CT-002'}, 'gold': {'contacts': [{'key': 'CT-002#1', 'name': 'Donald Lovelace', 'region': 'AMER-East'}, {'key': 'CT-002#2', 'name': 'Grace Allen', 'region': 'AMER-East'}, {'key': 'CT-002#3', 'name': 'Edsger Liskov', 'region': 'AMER-West'}, {'key': 'CT-002#4', 'name': 'Frances Allen', 'region': 'EMEA'}, {'key': 'CT-002#5', 'name': 'Frances Allen', 'region': 'APAC'}, {'key': 'CT-002#6', 'name': 'Tim Allen', 'region': 'EMEA'}]}, 'id': 'CT-002'}}",
+     "kind": "trace-failure",
+     "source_trace": "a88ed39b880f3e9f1b062449046dd437",
+     "task_id": "CT-002"
+    },
+    {
+     "expected_failure": "FAIL:RATE_LIMITED",
+     "id": "seed-b06d6dfd5fb8",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'tyrell.example', 'name': 'Tim Lovelace'}, {'domain': 'stark.test', 'name': 'Frances Turing'}, {'domain': 'wonka.invalid', 'name': 'Alan Knuth'}, {'domain': 'initech.example', 'name': 'Donald Thompson'}, {'domain': 'vandelay.example', 'name': 'Donald Liskov'}, {'domain': 'soylent.test', 'name': 'Ada Dijkstra'}], 'ref': 'CT-004'}, 'gold': {'contacts': [{'key': 'CT-004#1', 'name': 'Tim Lovelace', 'region': 'EMEA'}, {'key': 'CT-004#2', 'name': 'Frances Turing', 'region': 'APAC'}, {'key': 'CT-004#3', 'name': 'Alan Knuth', 'region': 'EMEA'}, {'key': 'CT-004#4', 'name': 'Donald Thompson', 'region': 'AMER-East'}, {'key': 'CT-004#5', 'name': 'Donald Liskov', 'region': 'EMEA'}, {'key': 'CT-004#6', 'name': 'Ada Dijkstra', 'region': 'LATAM'}]}, 'id': 'CT-004'}}",
+     "kind": "trace-failure",
+     "source_trace": "b06d6dfd5fb81b78551b101f5f0e67f2",
+     "task_id": "CT-004"
+    },
+    {
+     "expected_failure": "FAIL:DUPLICATE_CONTACT",
+     "id": "seed-cb8643d14444",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'stark.invalid', 'name': 'Alan Lovelace'}, {'domain': 'wonka.test', 'name': 'Donald Dijkstra'}, {'domain': 'stark.test', 'name': 'Ken Knuth'}], 'ref': 'CT-016'}, 'gold': {'contacts': [{'key': 'CT-016#1', 'name': 'Alan Lovelace', 'region': 'AMER-West'}, {'key': 'CT-016#2', 'name': 'Donald Dijkstra', 'region': 'AMER-West'}, {'key': 'CT-016#3', 'name': 'Ken Knuth', 'region': 'APAC'}]}, 'id': 'CT-016'}}",
+     "kind": "trace-failure",
+     "source_trace": "cb8643d1444440d5b080f047625f48d8",
+     "task_id": "CT-016"
+    },
+    {
+     "expected_failure": "FAIL:RATE_LIMITED",
+     "id": "seed-d930072ba175",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'cyberdyne.test', 'name': 'Alan Knuth'}, {'domain': 'vandelay.invalid', 'name': 'Frances Knuth'}, {'domain': 'umbrella.example', 'name': 'Donald Lovelace'}, {'domain': 'stark.test', 'name': 'Alan Dijkstra'}, {'domain': 'acme.test', 'name': 'Frances Hopper'}], 'ref': 'CT-019'}, 'gold': {'contacts': [{'key': 'CT-019#1', 'name': 'Alan Knuth', 'region': 'LATAM'}, {'key': 'CT-019#2', 'name': 'Frances Knuth', 'region': 'EMEA'}, {'key': 'CT-019#3', 'name': 'Donald Lovelace', 'region': 'EMEA'}, {'key': 'CT-019#4', 'name': 'Alan Dijkstra', 'region': 'APAC'}, {'key': 'CT-019#5', 'name': 'Frances Hopper', 'region': 'LATAM'}]}, 'id': 'CT-019'}}",
+     "kind": "trace-failure",
+     "source_trace": "d930072ba175acc68c5bdbadd927531c",
+     "task_id": "CT-019"
+    },
+    {
+     "expected_failure": "FAIL:DUPLICATE_CONTACT",
+     "id": "seed-e5ac11e3dbe6",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'vandelay.example', 'name': 'Alan Allen'}, {'domain': 'hooli.example', 'name': 'Edsger Hopper'}, {'domain': 'globex.example', 'name': 'Donald Dijkstra'}], 'ref': 'CT-009'}, 'gold': {'contacts': [{'key': 'CT-009#1', 'name': 'Alan Allen', 'region': 'EMEA'}, {'key': 'CT-009#2', 'name': 'Edsger Hopper', 'region': 'AMER-East'}, {'key': 'CT-009#3', 'name': 'Donald Dijkstra', 'region': 'EMEA'}]}, 'id': 'CT-009'}}",
+     "kind": "trace-failure",
+     "source_trace": "e5ac11e3dbe6ede06380f4885c824601",
+     "task_id": "CT-009"
+    },
+    {
+     "expected_failure": "FAIL:RATE_LIMITED",
+     "id": "seed-e794a11db5ab",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'umbrella.test', 'name': 'Edsger Thompson'}, {'domain': 'soylent.invalid', 'name': 'Tim Lovelace'}, {'domain': 'umbrella.test', 'name': 'Tim Turing'}, {'domain': 'globex.invalid', 'name': 'Barbara Knuth'}, {'domain': 'globex.invalid', 'name': 'Ada Dijkstra'}], 'ref': 'CT-011'}, 'gold': {'contacts': [{'key': 'CT-011#1', 'name': 'Edsger Thompson', 'region': 'APAC'}, {'key': 'CT-011#2', 'name': 'Tim Lovelace', 'region': 'LATAM'}, {'key': 'CT-011#3', 'name': 'Tim Turing', 'region': 'APAC'}, {'key': 'CT-011#4', 'name': 'Barbara Knuth', 'region': 'EMEA'}, {'key': 'CT-011#5', 'name': 'Ada Dijkstra', 'region': 'EMEA'}]}, 'id': 'CT-011'}}",
+     "kind": "trace-failure",
+     "source_trace": "e794a11db5ab11cfe43701908927ff62",
+     "task_id": "CT-011"
+    },
+    {
+     "expected_failure": "FAIL:RATE_LIMITED",
+     "id": "seed-f5211e564bca",
+     "input_preview": "{'task': {'batch': {'contacts': [{'domain': 'globex.test', 'name': 'Frances Liskov'}, {'domain': 'globex.invalid', 'name': 'Frances Dijkstra'}, {'domain': 'wayne.example', 'name': 'Donald Allen'}, {'domain': 'globex.example', 'name': 'Alan Allen'}], 'ref': 'CT-007'}, 'gold': {'contacts': [{'key': 'CT-007#1', 'name': 'Frances Liskov', 'region': 'APAC'}, {'key': 'CT-007#2', 'name': 'Frances Dijkstra', 'region': 'EMEA'}, {'key': 'CT-007#3', 'name': 'Donald Allen', 'region': 'APAC'}, {'key': 'CT-007#4', 'name': 'Alan Allen', 'region': 'EMEA'}]}, 'id': 'CT-007'}}",
+     "kind": "trace-failure",
+     "source_trace": "f5211e564bca2db32461075fc9754c17",
+     "task_id": "CT-007"
+    }
+   ],
+   "train": 16,
+   "transient_retries": [
+    {
+     "recovered_spans": [
+      "enrich",
+      "enrich"
+     ],
+     "source_trace": "03fb98ae3653d69482a1ca25a7fafe05",
+     "task_id": "CT-023"
+    }
+   ]
+  },
+  "O6_baseline": {
+   "cost_usd": 0.0752,
+   "ok": true,
+   "p95_duration_ms": 916.407,
+   "pass_rate": 0.125,
+   "passed": 3,
+   "replay": {
+    "failures": 22,
+    "traces": 24
+   },
+   "traces": 24,
+   "wilson_95": [
+    0.0434,
+    0.31
+   ]
+  },
+  "O7_immune_scan": {
+   "antibodies": 1,
+   "matches": [
+    {
+     "antibody": "AB-1@1.1",
+     "binding": {
+      "Enc": "sync_contacts",
+      "F": "attempt",
+      "R": "retry_with_backoff",
+      "S": "SyncSession",
+      "T": "SyncSession.push"
+     }
+    },
+    {
+     "antibody": "AB-1@1.1",
+     "binding": {
+      "Enc": "sync_contacts",
+      "F": "attempt",
+      "R": "retry_with_backoff",
+      "S": "SyncSession",
+      "T": "create_contact"
+     }
+    }
+   ],
+   "ok": true,
+   "receipt": {
+    "foreign_posts": "each one waits for the Architect's approval",
+    "merge": false,
+    "pr_only": true
+   },
+   "status": "scanned"
+  },
+  "host": "crm-practice",
+  "via": "Onboarding workflow (in-process Temporal test server)"
+ },
+ "oss": "OSS-1 (rehearsal stand-in: the disclosed CRM practice host)",
+ "phase": "rehearsal",
+ "run": "oss1-20261013-073328"
+}

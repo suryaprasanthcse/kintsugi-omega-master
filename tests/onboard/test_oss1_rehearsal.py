@@ -220,6 +220,19 @@ def test_the_newest_evidence_matches_the_committed_fixtures() -> None:
     evidence = json.loads(EVIDENCE[-1].read_text(encoding="utf-8"))
     assert evidence["intake"]["sha256"] == rehearsal._sha(rehearsal.INTAKE)
     assert evidence["checkout"]["sha256"] == rehearsal._tree_sha(rehearsal.PRACTICE)
+    onboarding = evidence["onboarding"]
+    assert onboarding["via"].startswith("Onboarding workflow")
+    assert all(step["ok"] for name, step in onboarding.items() if name.startswith("O"))
+    card = onboarding["O3_instrument"]["health_card"]
+    assert card["side_effecting_tools"] == ["practice_crm/tools.py:create_contact"]
+    evals = onboarding["O5_evals"]
+    retried = {t["source_trace"] for t in evals["transient_retries"]}
+    assert retried.isdisjoint(s["source_trace"] for s in evals["seeds"])
+    assert evidence["exports"]["priced_traces"] == evidence["exports"]["traces"]
+    text = EVIDENCE[-1].read_text(encoding="utf-8")
+    assert onboarding["O2_sandbox"]["sandbox"].startswith("<run>/")
+    assert "AppData" not in text  # no local path in public evidence
+    assert ":/Users/" not in text
 
 
 def test_the_cli_runs_the_rehearsal(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

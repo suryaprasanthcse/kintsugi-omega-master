@@ -11,14 +11,16 @@ nothing leaving this machine:
    spans are captured in memory and written in the neatlogs Public API's export shape
    (``trace_export``). No neatlogs project exists for it, so this stands in for the
    maintainers' export, and says so.
-3. **Onboarding**: ``pipeline.onboard`` on the filled-in intake fixture
-   (``tests/fixtures/rehearsal/oss1/intake.md``, all five consent boxes checked) with the
-   checkout and the exports: intake, health card, replay mode, seed evals, baseline, immune
-   scan, PR-only receipt.
+3. **Onboarding**: the filled-in intake fixture (``tests/fixtures/rehearsal/oss1/intake.md``,
+   all five consent boxes checked) is registered with an onboarding desk and the ``Onboarding``
+   workflow runs O1–O7 as ``onboard_step`` activities on an in-process Temporal test server
+   (``kintsugi.onboard.workflow``): intake, sandbox, instrumentation, entire-graph index, eval
+   synthesis, baseline from the replayed exports, immune scan with the PR-only receipt.
 
 The intake names a fictional, disclosed repository slug that is never contacted: the rehearsal
 has no GitHub or neatlogs port at all, and a socket guard (in this process and in the host's)
-refuses and counts every non-loopback connection. The evidence records both.
+refuses and counts every non-loopback connection. The evidence records both. (The Temporal
+test server is a local binary the SDK caches on first use, as the control-plane tests do.)
 """
 
 from __future__ import annotations
@@ -41,6 +43,9 @@ from kintsugi.gates.evals import tasks_jsonl
 from kintsugi.gates.target import load_target
 from kintsugi.memory.library import AntibodyLibrary
 from kintsugi.onboard import pipeline, trace_export
+from kintsugi.onboard.desk import OnboardingCase, OnboardingDesk
+from kintsugi.onboard.workflow import record as workflow_record
+from kintsugi.onboard.workflow import run_onboarding
 from kintsugi.sandbox import proc
 from kintsugi.sandbox.llm_proxy import account_of
 
@@ -140,11 +145,17 @@ def run(cfg: OnboardRehearsal) -> dict[str, Any]:
         exports = cfg.root / "exports"
         exported = export_traces(checkout, exports, seed=cfg.seed, limit=cfg.limit)
         cfg.log(f"[{cfg.run}] exported {exported['traces']} traces: {exported['verdicts']}")
-        library = AntibodyLibrary(OMEGA / "antibodies")
-        record = pipeline.onboard(INTAKE.read_text(encoding="utf-8"), checkout, exports,
-                                  library, package_dir="practice_crm",
-                                  side_effect_tools=SIDE_EFFECT_TOOLS,
-                                  root=cfg.root / "cases")  # fmt: skip
+        desk = OnboardingDesk(cfg.root / "cases", AntibodyLibrary(OMEGA / "antibodies"))
+        form = INTAKE.read_text(encoding="utf-8")
+        host = pipeline.host_id(form)
+        desk.register(OnboardingCase(host, form, str(checkout), str(exports), "practice_crm",
+                                     SIDE_EFFECT_TOOLS))  # fmt: skip
+        results = run_onboarding(desk, host)  # the Onboarding workflow, step by step
+        record = {"host": host, "via": "Onboarding workflow (in-process Temporal test server)",
+                  **workflow_record(results)}  # fmt: skip
+    sandbox = record.get("O2_sandbox", {})
+    if "sandbox" in sandbox:  # evidence names the scratch run folder, never a local path
+        sandbox["sandbox"] = "<run>/" + Path(sandbox["sandbox"]).relative_to(cfg.root).as_posix()
     refused = list(guard.refused) + list(exported["host_non_loopback_refused"])
     cfg.log(f"[{cfg.run}] onboarded: replay {record['O6_baseline']['replay']}, "
             f"immune scan {record['O7_immune_scan']['status']}")  # fmt: skip

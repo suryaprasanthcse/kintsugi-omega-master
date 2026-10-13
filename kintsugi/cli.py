@@ -180,6 +180,22 @@ def _build_parser() -> argparse.ArgumentParser:
     oss1.add_argument("--seed", type=int, default=1)
     oss1.add_argument("--limit", type=int, default=24, help="train tasks to run and export")
     oss1.add_argument("--out", type=Path, default=None, help="evidence JSON")
+    onb = onboard_sub.add_parser("run", help="O1–O7 for an intake via the Onboarding workflow")
+    onb.add_argument("--form", type=Path, required=True, help="the intake issue's body (markdown)")
+    onb.add_argument("--checkout", type=Path, required=True, help="a local copy of the repository")
+    onb.add_argument("--exports", type=Path, default=None, help="the maintainers' trace export")
+    onb.add_argument("--package-dir", default=".")
+    onb.add_argument("--side-effect-tool", action="append", default=[])
+    onb.add_argument(
+        "--root",
+        type=Path,
+        default=None,
+        help="case folders (default: the runtime's <state>/onboarding, else temp)",
+    )
+    onb.add_argument("--runtime", type=Path, default=None, help="W runtime file (its desk)")
+    onb.add_argument(
+        "--temporal", default=None, help="W's Temporal frontend; default: an in-process test server"
+    )
 
     arena = sub.add_parser("arena", help="the Arena board and public API (§7.7)")
     arena_sub = arena.add_subparsers(dest="arena_command", required=True)
@@ -297,6 +313,38 @@ def _t0_check(args: argparse.Namespace) -> int:
                             rehearsal_identity=args.rehearsal_identity)  # fmt: skip
     print(preflight.as_json(items) if args.json else preflight.render(items))
     return EXIT_OK if all(i.done for i in items) else EXIT_FAIL
+
+
+def _onboard_run(args: argparse.Namespace) -> int:
+    import json
+    import tempfile
+
+    from kintsugi.memory.library import AntibodyLibrary
+    from kintsugi.onboard import pipeline
+    from kintsugi.onboard.desk import OnboardingCase, OnboardingDesk
+    from kintsugi.onboard.intake import IntakeRefused
+    from kintsugi.onboard.workflow import record, run_onboarding
+
+    form = args.form.read_text(encoding="utf-8")
+    try:
+        host = pipeline.host_id(form)
+    except IntakeRefused as error:
+        print(f"intake refused: {error}", file=sys.stderr)
+        return EXIT_FAIL
+    root = args.root
+    if root is None and args.runtime is not None:
+        from kintsugi.crew.runtime import RuntimeConfig
+
+        root = RuntimeConfig.load(args.runtime).state_dir / "onboarding"  # W's desk
+    root = root or Path(tempfile.mkdtemp(prefix="kintsugi-onboard-"))
+    desk = OnboardingDesk(root, AntibodyLibrary(_repo() / "antibodies"))
+    desk.register(OnboardingCase(host, form, str(args.checkout.resolve()),
+                                 str(args.exports.resolve()) if args.exports else None,
+                                 args.package_dir, tuple(args.side_effect_tool)))  # fmt: skip
+    results = run_onboarding(desk, host, target=args.temporal)
+    print(json.dumps({"host": host, "cases": str(root), **record(results)}, indent=1,
+                     sort_keys=True, default=str))  # fmt: skip
+    return EXIT_OK if len(results) == 7 and all(r.ok for r in results) else EXIT_FAIL
 
 
 def _arena_config(args: argparse.Namespace) -> Any:
@@ -721,6 +769,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _econ(args)
     if args.command == "arena":
         return _arena_serve(args)
+    if args.command == "onboard" and args.onboard_command == "run":
+        return _onboard_run(args)
     if args.command == "onboard":
         from kintsugi.onboard import rehearsal
 
