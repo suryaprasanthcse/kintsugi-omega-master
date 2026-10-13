@@ -74,20 +74,31 @@ def test_the_app_serves_the_board_beside_the_api(tmp_path: Path) -> None:
 def test_the_state_before_t0_reads_committed_facts_only(tmp_path: Path) -> None:
     state = svc.arena_state(_cfg(tmp_path, sabotage=False))
     assert state["window"] == "before T0"
-    assert state["ledger"] == {"seq": 0, "h": None}
+    assert state["ledger"] == {"seq": 0, "h": None, "anchor": None}
     assert state["incidents"] == [] and state["escalations"] == []  # noqa: PT018
     assert state["open"] is False
     fleet = {row["host"]: row for row in state["fleet"]}
     assert sorted(fleet) == ["ledger", "scout", "triage"]  # hosts/omega is not fleet traffic
     assert fleet["ledger"]["tasks"] == 360 and fleet["ledger"]["meets_slo"] is True  # noqa: PT018
     assert fleet["triage"]["external_tools"] == ["apply_label", "comment"]
+    assert (fleet["ledger"]["open_incidents"], fleet["ledger"]["last_canary"]) == (0, None)
     immunity = state["immunity"]
     assert immunity["rows"]["AB-1@1.1"]["crm-practice"] == "protected"
     assert immunity["rows"]["AB-1@1.1"]["scout"] == "excluded"  # the refinement's negative
+    assert immunity["rows"]["AB-1@1.1"]["triage"] == "n/a"  # a fleet host it never touched
+    assert set(fleet) <= set(immunity["hosts"])
     curve = state["learning_curve"]
     assert curve["status"] == "fitted"
     assert [p["n"] for p in curve["points"]] == [1, 2, 3, 4]
     assert curve["points"][1]["ref"] == "INC-R235459-0001"
+    assert len(curve["log_points"]) == 4
+    assert curve["empirical_slope"] < 0  # costs fall as responses accumulate
+
+
+def test_the_loglog_slope_recovers_wrights_exponent() -> None:
+    points = [{"n": n, "cost_usd": 10.0 * n**-0.4} for n in range(1, 9)]
+    assert svc.loglog_slope(points) == pytest.approx(-0.4, abs=1e-6)
+    assert svc.loglog_slope(points[:1]) is None  # one point has no slope
 
 
 @pytest.fixture
@@ -125,6 +136,7 @@ def w_repo(tmp_path: Path) -> tuple[Path, str]:
 def test_the_state_inside_w_reads_the_real_ledger_branch(
     tmp_path: Path, w_repo: tuple[Path, str]
 ) -> None:
+    from kintsugi.proof import attest
     from kintsugi.proof.ledger_branch import BranchLedger
 
     repo, genesis = w_repo
@@ -134,6 +146,7 @@ def test_the_state_inside_w_reads_the_real_ledger_branch(
                    "transition": {"source": "OPEN", "target": "TRIAGED"}})  # fmt: skip
     ledger.append({"type": "escalate", "incident": "INC-0001", "reason": "no repair budget (L5)"})
     ledger.append({"type": "note", "text": "not an incident entry"})
+    anchor = ledger.anchor(attest.Ed25519Signer.generate())
     cfg = svc.ArenaConfig(repo=REPO, ledger_repo=repo, state=tmp_path / "arena")
     loaded = svc.load_ledger(cfg)
     assert isinstance(loaded, BranchLedger)
@@ -141,7 +154,8 @@ def test_the_state_inside_w_reads_the_real_ledger_branch(
                                                      "escalate", "note"]  # fmt: skip
     state = svc.arena_state(cfg)
     assert state["window"] == "open"
-    assert state["ledger"] == {"seq": 5, "h": loaded.entries()[-1]["hash"]}
+    assert state["ledger"] == {"seq": 5, "h": loaded.entries()[-1]["hash"],
+                               "anchor": {"tag": anchor.tag, "seq": 5, "h": anchor.h}}  # fmt: skip
     assert [i["type"] for i in state["incidents"]] == ["escalate", "transition", "incident"]
     assert [i["seq"] for i in state["incidents"]] == [4, 3, 2]  # the ledger's own numbering
     assert state["incidents"][1]["summary"] == "OPEN → TRIAGED"
@@ -172,6 +186,56 @@ def test_the_immunity_matrix_follows_each_hosts_latest_event(tmp_path: Path) -> 
     matrix = svc.immunity_matrix(AntibodyLibrary(tmp_path / "antibodies"))
     assert matrix["rows"]["AB-1@1.1"]["triage"] == "quarantined"
     assert "triage" in matrix["hosts"]
+    data["events"].append({"event": "scan", "matched": ["ledger", "crm-practice"],
+                           "version": "1.1"})  # fmt: skip
+    lineage.write_text(json.dumps(data), encoding="utf-8")
+    rows = svc.immunity_matrix(AntibodyLibrary(tmp_path / "antibodies"), ["ledger", "scout"])
+    cells = rows["rows"]["AB-1@1.1"]
+    assert cells["ledger"] == "vulnerable"  # matched by the latest scan, not protected
+    assert cells["crm-practice"] == "protected"  # protection wins over a match
+
+
+def test_open_incidents_and_the_last_canary_per_host() -> None:
+    entries: tuple[dict[str, Any], ...] = (
+        {"type": "incident", "incident": "INC-1", "host": "ledger"},
+        {"type": "incident", "incident": "INC-2", "host": "ledger"},
+        {"type": "transition", "incident": "INC-2",
+         "transition": {"source": "CANARY", "target": "RESOLVED"}},
+        {"type": "incident", "incident": "INC-3", "host": "scout"},
+        {"type": "transition", "incident": "INC-3",
+         "transition": {"source": "CANARY", "target": "REPAIRING"}},
+        {"type": "incident", "incident": "INC-4", "host": "scout"},
+        {"type": "escalate", "incident": "INC-4", "reason": "no repair budget (L5)"},
+        {"type": "revert", "incident": "INC-5", "host": "triage"},
+    )  # fmt: skip
+    activity = svc.host_activity(entries)
+    assert activity["ledger"]["open_incidents"] == ["INC-1"]
+    assert activity["ledger"]["last_canary"]["outcome"] == "accepted"
+    assert activity["scout"]["open_incidents"] == ["INC-3"]  # re-entered repair: still open
+    assert activity["scout"]["last_canary"]["outcome"] == "rejected (re-entered repair)"
+    assert activity["triage"]["last_canary"]["outcome"] == "rejected (reverted)"
+    rows = {r["host"]: r for r in svc.fleet(REPO, entries)}
+    assert (rows["ledger"]["open_incidents"], rows["ledger"]["open_incident_ids"]) == (1, ["INC-1"])
+    assert rows["scout"]["last_canary"]["incident"] == "INC-3"
+
+
+def test_board_js_reads_only_fields_the_state_provides(tmp_path: Path) -> None:
+    """The static board's contract with GET /api/state (the board has no build step or test
+    runner of its own; it was also checked in a browser at 1280 px and 375 px)."""
+    js = (BOARD / "board.js").read_text(encoding="utf-8")
+    state = svc.arena_state(_cfg(tmp_path, sabotage=False))
+    used = {
+        "host.open_incidents": "open_incidents" in state["fleet"][0],
+        "host.last_canary": "last_canary" in state["fleet"][0],
+        "ledger.anchor": "anchor" in state["ledger"],
+        "curve.empirical_slope": "empirical_slope" in state["learning_curve"],
+        "immunity.hosts": "hosts" in state["immunity"],
+    }  # fmt: skip
+    for field, present in used.items():
+        assert field in js, field
+        assert present, field
+    assert '"vulnerable"' in js or "vulnerable" in (BOARD / "board.css").read_text(encoding="utf-8")
+    assert "Math.log(n) / Math.log(maxN)" in js  # the x axis is logarithmic: log-log
 
 
 # ---- the real factory: Saboteur.seal + the campaign signal ----------------------------------
@@ -222,6 +286,44 @@ def test_a_sealed_request_the_campaign_did_not_take_answers_503_and_spends_its_i
         service.submit(GOOD, "198.51.100.1")
     assert again.value.answer["id"] == "S-A0002"
     assert again.value.answer["c"] != error.value.answer["c"]
+
+
+def test_a_reset_database_never_reuses_a_sealed_spec_id(tmp_path: Path) -> None:
+    cfg = _cfg(tmp_path, sabotage=True)
+    queued: list[tuple[str, float]] = []
+    first = svc.build_service(cfg, queue=lambda sid, d: queued.append((sid, d)))
+    one = first.submit(GOOD, "203.0.113.7")
+    assert one["id"] == "S-A0001"
+    (cfg.state_dir / "arena.sqlite").unlink()  # the Arena's database is lost; the store is not
+    second = svc.build_service(cfg, queue=lambda sid, d: queued.append((sid, d)))
+    two = second.submit(GOOD, "198.51.100.1")
+    assert two["id"] == "S-A0002"  # S-A0001 is sealed in the store: never handed out again
+    assert two["c"] != one["c"]
+    assert [sid for sid, _ in queued] == ["S-A0001", "S-A0002"]
+
+
+def test_concurrent_allocations_are_unique(tmp_path: Path) -> None:
+    import threading
+
+    from kintsugi.arena_api import Limiter
+
+    limiter = Limiter(tmp_path / "arena.sqlite")
+    found: list[str] = []
+    lock = threading.Lock()
+
+    def take() -> None:
+        sid = Limiter(tmp_path / "arena.sqlite").allocate()  # separate connections, one file
+        with lock:
+            found.append(sid)
+
+    threads = [threading.Thread(target=take) for _ in range(16)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(set(found)) == 16
+    assert limiter.allocate(lambda sid: sid == "S-A0018") == "S-A0017"
+    assert limiter.allocate(lambda sid: sid == "S-A0018") == "S-A0019"  # skips a sealed id
 
 
 def test_the_temporal_queue_signals_the_running_campaign() -> None:

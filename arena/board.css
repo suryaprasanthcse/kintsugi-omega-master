@@ -126,8 +126,12 @@ h3 { margin: 16px 0 6px; font-size: 0.95rem; color: var(--muted); }
 }
 .chip.ok, .chip.protected, .chip.active { color: var(--ok); }
 .chip.bad, .chip.quarantined, .chip.excluded, .chip.unprotected, .chip.escalate { color: var(--bad); }
-.chip.warn, .chip.triggered, .chip.candidate, .chip.matured { color: var(--warn); }
+.chip.warn, .chip.triggered, .chip.candidate, .chip.matured, .chip.vulnerable { color: var(--warn); }
 .chip.info { color: var(--info); }
+.chip.na { color: var(--muted); font-weight: 400; }
+.chip.vulnerable { border: 1px solid var(--warn); }
+td.cell-vulnerable { background: color-mix(in srgb, var(--warn) 14%, transparent); }
+td.cell-protected { background: color-mix(in srgb, var(--ok) 12%, transparent); }
 
 .stream { list-style: none; margin: 8px 0 0; padding: 0; max-height: 360px; overflow-y: auto; }
 .stream li { padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 0.88rem; overflow-wrap: anywhere; }

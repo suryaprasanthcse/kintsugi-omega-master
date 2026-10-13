@@ -22,8 +22,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import threading
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -155,14 +156,60 @@ def _json(path: Path) -> dict[str, Any] | None:
     return found if isinstance(found, dict) else None
 
 
-def fleet(repo: Path) -> list[dict[str, Any]]:
-    """The fleet board: each host's tier, SLO and recorded baseline (health card)."""
+TERMINAL = ("RESOLVED", "ESCALATED", "PARKED")
+CANARY_OUTCOMES = {"RESOLVED": "accepted", "REPAIRING": "rejected (re-entered repair)",
+                   "ESCALATED": "rejected (escalated)"}  # fmt: skip
+
+
+def host_activity(entries: tuple[dict[str, Any], ...]) -> dict[str, dict[str, Any]]:
+    """Per host, from the ledger: its open incidents and its last canary outcome (§7.7)."""
+    host_of: dict[str, str] = {}
+    state: dict[str, str] = {}
+    closed: set[str] = set()
+    canary: dict[str, dict[str, Any]] = {}
+    for position, entry in enumerate(entries, 1):
+        incident = entry.get("incident")
+        if not isinstance(incident, str):
+            continue
+        if entry.get("host"):
+            host_of.setdefault(incident, str(entry["host"]))
+        kind = entry.get("type")
+        if kind in ("escalate", "park"):
+            closed.add(incident)
+        transition = entry.get("transition")
+        if kind == "transition" and isinstance(transition, Mapping):
+            target = str(transition.get("target"))
+            state[incident] = target
+            if transition.get("source") == "CANARY" and incident in host_of:
+                canary[host_of[incident]] = {
+                    "incident": incident, "at": entry.get("at"), "seq": entry.get("seq", position),
+                    "outcome": CANARY_OUTCOMES.get(target, target.lower()),
+                }  # fmt: skip
+        if kind == "revert" and incident in host_of:
+            canary[host_of[incident]] = {"incident": incident, "at": entry.get("at"),
+                                         "seq": entry.get("seq", position),
+                                         "outcome": "rejected (reverted)"}  # fmt: skip
+    activity: dict[str, dict[str, Any]] = {}
+    for incident, host in host_of.items():
+        row = activity.setdefault(host, {"open_incidents": [], "last_canary": None})
+        if incident not in closed and state.get(incident) not in TERMINAL:
+            row["open_incidents"].append(incident)
+    for host, last in canary.items():
+        activity.setdefault(host, {"open_incidents": [], "last_canary": None})["last_canary"] = last
+    return activity
+
+
+def fleet(repo: Path, entries: tuple[dict[str, Any], ...] = ()) -> list[dict[str, Any]]:
+    """The fleet board: each host's tier, SLO, recorded baseline (health card), open incidents
+    and last canary outcome."""
     from kintsugi.fleet.hosts import load_hosts
 
+    activity = host_activity(entries)
     rows = []
     for host, spec in sorted(load_hosts(repo).items()):
         card = _json(Path(repo) / "evidence" / "baselines" / f"{host}.json") or {}
         pooled = card.get("pooled") or {}
+        live = activity.get(host) or {"open_incidents": [], "last_canary": None}
         rows.append({
             "host": host, "description": spec.description, "tier": spec.economics.tier,
             "slo_pass_rate": spec.slo.pass_rate, "pass_rate": pooled.get("pass_rate"),
@@ -170,6 +217,9 @@ def fleet(repo: Path) -> list[dict[str, Any]]:
             "meets_slo": card.get("meets_slo"), "p95_latency_s": card.get("p95_latency_s"),
             "model_mode": card.get("model_mode"), "recorded_at": card.get("recorded_at"),
             "external_tools": sorted(n for n, t in spec.tools.items() if t.external),
+            "open_incidents": len(live["open_incidents"]),
+            "open_incident_ids": sorted(live["open_incidents"]),
+            "last_canary": live["last_canary"],
         })  # fmt: skip
     return rows
 
@@ -197,10 +247,12 @@ def incident_stream(entries: tuple[dict[str, Any], ...]) -> list[dict[str, Any]]
     return stream[-STREAM:][::-1]
 
 
-def immunity_matrix(library: AntibodyLibrary) -> dict[str, Any]:
-    """Antibody × host: each host's latest status in the antibody's lineage."""
+def immunity_matrix(library: AntibodyLibrary, fleet_hosts: Iterable[str] = ()) -> dict[str, Any]:
+    """Antibody × host (§7.7's heatmap): each host's latest status in the antibody's lineage.
+    A host the latest motif scan matched without protection yet is ``vulnerable``; a fleet
+    host the antibody never touched is ``n/a``."""
     rows: dict[str, dict[str, str]] = {}
-    hosts: set[str] = set()
+    hosts: set[str] = set(fleet_hosts)
     for ab_id in library.ids():
         lineage = _json(library.root / ab_id / "lineage.json") or {}
         ab = library.load(ab_id)
@@ -220,8 +272,15 @@ def immunity_matrix(library: AntibodyLibrary) -> dict[str, Any]:
                 cells[host] = "excluded"
         for host in lineage.get("hosts_protected") or ab.lineage.hosts_protected:
             cells[host] = "protected"
+        scans = [e for e in lineage.get("events") or [] if e.get("event") == "scan"]
+        for host in (scans[-1].get("matched") or []) if scans else []:
+            if cells.get(host) in (None, "triggered", "unprotected"):
+                cells[host] = "vulnerable"  # matched by the latest scan, not protected yet
         rows[ab.ref] = cells
         hosts.update(cells)
+    for cells in rows.values():
+        for host in hosts:
+            cells.setdefault(host, "n/a")
     return {"hosts": sorted(hosts), "rows": rows}
 
 
@@ -232,9 +291,34 @@ def learning_curve(repo: Path) -> dict[str, Any]:
         {"n": p.get("n"), "cost_usd": p.get("cost_usd"), "ref": ref}
         for p, ref in zip(fit.get("points") or [], fit.get("refs") or [], strict=False)
     ]
-    return {"points": points, "b": fit.get("b"), "c1": fit.get("c1"), "r2": fit.get("r2"),
+    usable = [p for p in points if isinstance(p["n"], int | float) and p["n"] > 0
+              and isinstance(p["cost_usd"], int | float) and p["cost_usd"] > 0]  # fmt: skip
+    log_points = [{"ln_n": round(math.log(p["n"]), 6), "ln_cost": round(math.log(p["cost_usd"]), 6)}
+                  for p in usable]  # fmt: skip
+    return {"points": points, "log_points": log_points, "empirical_slope": loglog_slope(usable),
+            "b": fit.get("b"), "c1": fit.get("c1"), "r2": fit.get("r2"),
             "progress_ratio": fit.get("progress_ratio"), "status": fit.get("status", "missing"),
             "phases": fit.get("phases") or []}  # fmt: skip
+
+
+def loglog_slope(points: Iterable[Mapping[str, Any]]) -> float | None:
+    """The least-squares slope of ln(cost) on ln(n): Wright's law makes it −b."""
+    xy = [(math.log(float(p["n"])), math.log(float(p["cost_usd"]))) for p in points]
+    if len({x for x, _ in xy}) < 2:
+        return None
+    mx = sum(x for x, _ in xy) / len(xy)
+    my = sum(y for _, y in xy) / len(xy)
+    num = sum((x - mx) * (y - my) for x, y in xy)
+    den = sum((x - mx) ** 2 for x, _ in xy)
+    return round(num / den, 6)
+
+
+def last_anchor(ledger: Any) -> dict[str, Any] | None:
+    anchors = ledger.anchors() if hasattr(ledger, "anchors") else []
+    if not anchors:
+        return None
+    last = anchors[-1]
+    return {"tag": last.tag, "seq": last.seq, "h": last.h}
 
 
 def arena_state(cfg: ArenaConfig, library: AntibodyLibrary | None = None) -> dict[str, Any]:
@@ -242,12 +326,14 @@ def arena_state(cfg: ArenaConfig, library: AntibodyLibrary | None = None) -> dic
     ledger = load_ledger(cfg)
     entries = tuple(ledger.entries())
     state = board_state(ledger, library)
+    state["ledger"]["anchor"] = last_anchor(ledger)
+    board = fleet(Path(cfg.repo), entries)
     state.update({
         "open": cfg.open,
         "window": "open" if not isinstance(ledger, _NoLedger) else "before T0",
-        "fleet": fleet(Path(cfg.repo)),
+        "fleet": board,
         "incidents": incident_stream(entries),
-        "immunity": immunity_matrix(library),
+        "immunity": immunity_matrix(library, [row["host"] for row in board]),
         "learning_curve": learning_curve(Path(cfg.repo)),
     })  # fmt: skip
     return state
@@ -261,14 +347,20 @@ def build_service(cfg: ArenaConfig, *, queue: Callable[[str, float], None] | Non
     tools = fleet_tools(Path(cfg.repo))
     cfg.state_dir.mkdir(parents=True, exist_ok=True)
     limiter = Limiter(cfg.state_dir / "arena.sqlite", daily_cap=cfg.daily_cap)
-    if cfg.sabotage is not None:
-        saboteur = Saboteur(cfg.sabotage.store, (cfg.sabotage.recipient,), tuple(tools))
+    saboteur = (Saboteur(cfg.sabotage.store, (cfg.sabotage.recipient,), tuple(tools))
+                if cfg.sabotage is not None else None)  # fmt: skip
+
+    def taken(spec_id: str) -> bool:  # a spec id already sealed in the store is never reused
+        return saboteur is not None and saboteur.record(spec_id) is not None
+
+    if saboteur is not None:
         seal: Callable[[Mapping[str, Any]], Mapping[str, Any]] = saboteur.seal
         port = queue or TemporalQueue(cfg.temporal, cfg.campaign_id)
     else:
         seal, port = closed_seal, queue or closed_queue
     extra = {"clock": clock} if clock is not None else {}
-    return ArenaService(tools, limiter, seal, port, state=lambda: arena_state(cfg), **extra)
+    return ArenaService(tools, limiter, seal, port, state=lambda: arena_state(cfg), taken=taken,
+                        **extra)  # fmt: skip
 
 
 def build_app(cfg: ArenaConfig, *, trust_forwarded: bool = False,

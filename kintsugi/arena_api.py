@@ -37,7 +37,8 @@ import secrets
 import sqlite3
 import threading
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -166,6 +167,10 @@ def fleet_tools(repo: Path) -> dict[str, list[str]]:
             for host, spec in load_hosts(repo).items()}  # fmt: skip
 
 
+def spec_id(n: int) -> str:
+    return f"S-A{n:04d}"
+
+
 class Limiter:
     """One accepted request per client per window, and a daily cap, in SQLite."""
 
@@ -179,9 +184,36 @@ class Limiter:
         with self._db() as db:
             db.execute("CREATE TABLE IF NOT EXISTS accepted (client TEXT NOT NULL, at REAL NOT "
                        "NULL, day TEXT NOT NULL, spec TEXT NOT NULL)")  # fmt: skip
+            db.execute("CREATE TABLE IF NOT EXISTS allocated (spec TEXT PRIMARY KEY, "
+                       "n INTEGER NOT NULL)")  # fmt: skip
 
-    def _db(self) -> sqlite3.Connection:
-        return sqlite3.connect(self.path, timeout=10.0)
+    def allocate(self, taken: Callable[[str], bool] = lambda spec_id: False) -> str:
+        """The next Arena spec id, never one already allocated here or already sealed in the
+        store (``taken``): a reset of this database cannot reuse a sealed id, because sealing an
+        existing id returns its earlier commitment (``Saboteur.seal`` is idempotent per id)."""
+        with self._lock, self._db() as db:
+            db.execute("BEGIN IMMEDIATE")  # one allocator at a time, across processes too
+            try:
+                row = db.execute("SELECT MAX(n) FROM allocated").fetchone()
+                n = max(int(row[0] or 0), int(db.execute("SELECT COUNT(*) FROM accepted")
+                                              .fetchone()[0])) + 1  # fmt: skip
+                while taken(spec_id(n)):
+                    n += 1
+                db.execute("INSERT INTO allocated VALUES (?, ?)", (spec_id(n), n))
+                db.execute("COMMIT")
+            except BaseException:
+                db.execute("ROLLBACK")
+                raise
+            return spec_id(n)
+
+    @contextmanager
+    def _db(self) -> Iterator[sqlite3.Connection]:
+        """An autocommit connection, always closed (a ``with`` on a connection only commits)."""
+        db = sqlite3.connect(self.path, timeout=10.0, isolation_level=None)
+        try:
+            yield db
+        finally:
+            db.close()
 
     def client(self, address: str) -> str:
         return hashlib.sha256(f"{self.salt}:{address}".encode()).hexdigest()
@@ -227,6 +259,7 @@ class ArenaService:
         *,
         state: Callable[[], Mapping[str, Any]] = dict,
         clock: Callable[[], float] = time.time,
+        taken: Callable[[str], bool] = lambda spec_id: False,  # already sealed in the store
     ) -> None:
         self.tools = tools
         self.limiter = limiter
@@ -234,12 +267,13 @@ class ArenaService:
         self.queue = queue
         self.state = state
         self.clock = clock
+        self.taken = taken
 
     def submit(self, payload: Any, address: str) -> dict[str, Any]:
         now = self.clock()
         compiled = compile_request(payload, self.tools)  # refuse before touching any limit
         self.limiter.check(address, now)
-        spec_id = f"S-A{self.limiter.count() + 1:04d}"
+        spec_id = self.limiter.allocate(self.taken)
         not_before = datetime.fromtimestamp(now, UTC) + timedelta(seconds=NOT_BEFORE_S)
         spec = compose(spec_id, compiled.cls, host=compiled.host, framing=FRAMING,
                        ground_truth={"files": [], "mechanism": compiled.cls},

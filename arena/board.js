@@ -56,6 +56,7 @@ function renderHead(state) {
   setText("window", state.window || "—");
   setText("ledger-seq", String(ledger.seq ?? 0));
   setText("ledger-head", short(ledger.h));
+  setText("ledger-anchor", ledger.anchor ? `${ledger.anchor.tag} · ${short(ledger.anchor.h)}` : "—");
   setText("updated", new Date().toLocaleTimeString());
 }
 
@@ -85,6 +86,10 @@ function renderFleet(state) {
     }
     const status = host.meets_slo === undefined || host.meets_slo === null
       ? chip("no baseline", "warn") : chip(miss ? "below SLO" : "meets SLO", miss ? "bad" : "ok");
+    const open = host.open_incidents || 0;
+    const canary = host.last_canary;
+    const canaryText = canary ? `last canary: ${canary.outcome} (${canary.incident})` : "last canary: none yet";
+    const canaryKind = !canary ? "na" : String(canary.outcome).startsWith("accepted") ? "ok" : "bad";
     root.append(el("article", { class: "card" },
       el("h3", { text: host.host }),
       el("p", { text: host.description || "" }),
@@ -92,6 +97,9 @@ function renderFleet(state) {
       bar,
       el("p", {}, status, " ", chip(host.tier || "—", "info"), " ",
         chip(`model: ${host.model_mode || "—"}`)),
+      el("p", { class: "live" },
+        chip(`${open} open incident${open === 1 ? "" : "s"}`, open ? "warn" : "ok"), " ",
+        chip(canaryText, canaryKind)),
       el("p", { text: `SLO ${pct(host.slo_pass_rate)} · ${host.tasks ?? "—"} tasks · p95 ` +
         `${host.p95_latency_s ?? "—"} s` }),
       el("p", { text: `external tools: ${(host.external_tools || []).join(", ") || "—"}` })));
@@ -133,7 +141,11 @@ function renderImmunity(state) {
     body.append(el("tr", {},
       el("th", { scope: "row" }, ref, " ", chip(String(state_.state || "").toLowerCase(),
         String(state_.state || "").toLowerCase())),
-      ...hosts.map((h) => el("td", {}, cells[h] ? chip(cells[h], cells[h]) : "—"))));
+      ...hosts.map((h) => {
+        const cell = cells[h] || "n/a";
+        const kind = cell === "n/a" ? "na" : cell;
+        return el("td", { class: `cell-${kind}`, title: `${ref} on ${h}: ${cell}` }, chip(cell, kind));
+      })));
   }
   table.append(body);
 }
@@ -152,7 +164,8 @@ function renderCurve(state) {
   const costs = points.map((p) => p.cost_usd);
   const fit = (n) => curve.c1 * Math.pow(n, -curve.b);
   const lo = Math.log10(Math.min(...costs) / 2), hi = Math.log10(Math.max(...costs) * 2);
-  const x = (n) => L + ((n - 1) / (maxN - 1)) * (W - L - R);
+  // Log-log (§7.7): Wright's law c(n) = c1 · n^(−b) is a straight line of slope −b here.
+  const x = (n) => L + (Math.log(n) / Math.log(maxN)) * (W - L - R);
   const y = (c) => T + (1 - (Math.log10(c) - lo) / (hi - lo)) * (H - T - B);
   const chart = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
     "aria-label": `Response cost falls from $${costs[0].toFixed(2)} to ` +
@@ -164,18 +177,18 @@ function renderCurve(state) {
     label.textContent = `$${10 ** e >= 1 ? 10 ** e : (10 ** e).toFixed(Math.abs(e))}`;
     chart.append(label, svg("line", { class: "axis", x1: L, y1: y(10 ** e), x2: W - R, y2: y(10 ** e) }));
   }
-  for (let n = 1; n <= maxN; n++) {
+  for (let n = 1; n <= maxN; n *= 2) {
     const label = svg("text", { class: "label", x: x(n), y: H - B + 16, "text-anchor": "middle" });
     label.textContent = String(n);
-    chart.append(label);
+    chart.append(label, svg("line", { class: "axis", x1: x(n), y1: H - B, x2: x(n), y2: H - B + 4 }));
   }
   const axis = svg("text", { class: "label", x: (L + W - R) / 2, y: H - 4, "text-anchor": "middle" });
-  axis.textContent = "response number";
+  axis.textContent = "cumulative responses n (log)";
   chart.append(axis);
   if (curve.status === "fitted" && typeof curve.c1 === "number" && typeof curve.b === "number") {
     const steps = [];
     for (let i = 0; i <= 40; i++) {
-      const n = 1 + (i / 40) * (maxN - 1);
+      const n = Math.exp((i / 40) * Math.log(maxN));
       const c = Math.min(Math.max(fit(n), 10 ** lo), 10 ** hi);
       steps.push(`${i ? "L" : "M"}${x(n).toFixed(1)},${y(c).toFixed(1)}`);
     }
@@ -190,7 +203,9 @@ function renderCurve(state) {
   }
   root.append(chart);
   const phases = (curve.phases || []).join(", ") || "—";
-  setText("curve-note", `Cost per response (log scale) · Wright fit b = ${curve.b?.toFixed?.(2) ?? "—"}` +
+  const slope = typeof curve.empirical_slope === "number" ? curve.empirical_slope.toFixed(2) : "—";
+  setText("curve-note", `Log-log: ln cost against ln n · empirical slope ${slope}` +
+    ` · Wright fit −b = ${typeof curve.b === "number" ? (-curve.b).toFixed(2) : "—"}` +
     `, progress ratio ${curve.progress_ratio?.toFixed?.(2) ?? "—"}, R² ${curve.r2?.toFixed?.(2) ?? "—"}` +
     ` · phase: ${phases}`);
 }
@@ -201,6 +216,9 @@ function renderLedger(state) {
   kv.replaceChildren(
     el("dt", { text: "Entries" }), el("dd", { text: String(ledger.seq ?? 0) }),
     el("dt", { text: "Head hash" }), el("dd", { class: "mono", text: ledger.h || "— (before T0)" }),
+    el("dt", { text: "Last anchor" }), el("dd", { class: "mono",
+      text: ledger.anchor ? `${ledger.anchor.tag} (seq ${ledger.anchor.seq}) ${ledger.anchor.h}`
+        : "— (no anchor yet)" }),
     el("dt", { text: "Arena" }), el("dd", {}, state.open ? chip("open", "ok") : chip("closed", "warn")));
   const esc = document.getElementById("escalations");
   esc.replaceChildren();

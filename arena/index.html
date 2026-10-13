@@ -17,6 +17,7 @@
       <div><dt>Window</dt><dd id="window">…</dd></div>
       <div><dt>Ledger seq</dt><dd id="ledger-seq">…</dd></div>
       <div><dt>Head</dt><dd id="ledger-head" class="mono">…</dd></div>
+      <div><dt>Last anchor</dt><dd id="ledger-anchor" class="mono">…</dd></div>
       <div><dt>Updated</dt><dd id="updated">…</dd></div>
     </dl>
   </header>
@@ -26,7 +27,8 @@
   <main class="grid">
     <section class="panel span-2" aria-labelledby="fleet-title">
       <h2 id="fleet-title">Fleet</h2>
-      <p class="note">Baseline pass rate with its Wilson 95% interval against each host's SLO.</p>
+      <p class="note">Baseline pass rate with its Wilson 95% interval against each host's SLO,
+        open incidents and the last canary outcome.</p>
       <div id="fleet" class="cards"></div>
     </section>
 
@@ -38,13 +40,14 @@
 
     <section class="panel" aria-labelledby="immunity-title">
       <h2 id="immunity-title">Immunity matrix</h2>
-      <p class="note">Each antibody's latest status per host, from its lineage.</p>
+      <p class="note">Hosts × antibodies: protected, vulnerable (matched by the latest motif
+        scan, not protected yet) or n/a, from each antibody's lineage.</p>
       <div class="table-wrap"><table id="immunity"></table></div>
     </section>
 
     <section class="panel" aria-labelledby="curve-title">
       <h2 id="curve-title">Learning curve</h2>
-      <p class="note" id="curve-note">Cost per response against response number (log scale), with the Wright refit.</p>
+      <p class="note" id="curve-note">Cost per response against cumulative responses, log-log, with the Wright refit.</p>
       <div id="curve" class="chart"></div>
     </section>
 
