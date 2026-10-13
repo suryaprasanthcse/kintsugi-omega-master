@@ -1,0 +1,42 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4SWDTSJVGPEATASTKDY0C6P",
+  "session_id": "6ec8f922-2eb8-485f-8cc3-ee5110304556",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-13T05:40:39.8744767Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "evidence/rehearsals/oss1-20261013-053800.json",
+    "kintsugi/cli.py",
+    "kintsugi/onboard/rehearsal.py",
+    "kintsugi/onboard/trace_export.py",
+    "tests/fixtures/rehearsal/oss1/intake.md",
+    "tests/onboard/test_oss1_rehearsal.py"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-opus-5-5",
+  "turn_id": "3e9c4f3cdd8a",
+  "checkpoint_transcript_start": 162,
+  "transcript_lines_at_start": 162,
+  "compact_transcript_start": 20,
+  "token_usage": {
+    "input_tokens": 72,
+    "cache_creation_tokens": 113726,
+    "cache_read_tokens": 6882100,
+    "output_tokens": 46878,
+    "api_call_count": 36
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-13T05:40:39.8094854Z",
+    "agent_lines": 921,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 921,
+    "total_lines_changed": 921,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
