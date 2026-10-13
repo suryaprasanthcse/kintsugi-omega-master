@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4T3BEP56EJKF40G9QMWM2MZ",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "business/cfo_export/coverage_scenarios.csv",
+    "business/cfo_export/meta.json",
+    "business/cfo_export/scenario_months.csv",
+    "business/cfo_export/scenarios.csv",
+    "business/plan.json",
+    "kintsugi/econ/cfo_sync.py",
+    "kintsugi/econ/scenarios.py",
+    "tests/econ/test_cfo_sync.py",
+    "tests/econ/test_scenarios.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 24,
+    "cache_creation_tokens": 36140,
+    "cache_read_tokens": 7970298,
+    "output_tokens": 22529,
+    "api_call_count": 12
+  }
+}
