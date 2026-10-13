@@ -11,6 +11,7 @@ import contextlib
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from kintsugi import PINNED_TOOLCHAIN, __version__
 from kintsugi.proof.attest import Ed25519Signer, fingerprint, load_public_key
@@ -180,6 +181,25 @@ def _build_parser() -> argparse.ArgumentParser:
     oss1.add_argument("--limit", type=int, default=24, help="train tasks to run and export")
     oss1.add_argument("--out", type=Path, default=None, help="evidence JSON")
 
+    arena = sub.add_parser("arena", help="the Arena board and public API (§7.7)")
+    arena_sub = arena.add_subparsers(dest="arena_command", required=True)
+    serve = arena_sub.add_parser(
+        "serve", help="serve arena/ with GET /api/state and POST /api/sabotage"
+    )
+    serve.add_argument("--runtime", type=Path, default=None,
+                       help="W runtime file (its sabotage store opens the Arena); default: "
+                            "KINTSUGI_RUNTIME, else a closed, read-only board")  # fmt: skip
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8787)
+    serve.add_argument("--temporal", default="localhost:7233", help="Temporal frontend")
+    serve.add_argument("--campaign", default=None, help="SabotageCampaign workflow id")
+    serve.add_argument("--daily-cap", type=int, default=None)
+    serve.add_argument(
+        "--trust-forwarded",
+        action="store_true",
+        help="key clients by X-Forwarded-For (only behind your own proxy)",
+    )
+
     keys = sub.add_parser("keys", help="attestation key custody (spec §4.5.1)")
     keys_sub = keys.add_subparsers(dest="keys_command", required=True)
     generate = keys_sub.add_parser(
@@ -277,6 +297,36 @@ def _t0_check(args: argparse.Namespace) -> int:
                             rehearsal_identity=args.rehearsal_identity)  # fmt: skip
     print(preflight.as_json(items) if args.json else preflight.render(items))
     return EXIT_OK if all(i.done for i in items) else EXIT_FAIL
+
+
+def _arena_config(args: argparse.Namespace) -> Any:
+    import os
+
+    from kintsugi.arena_service import CAMPAIGN_WORKFLOW_ID, ArenaConfig
+    from kintsugi.crew.runtime import ENV, RuntimeConfig
+
+    overrides: dict[str, Any] = {"temporal": args.temporal,
+                                 "campaign_id": args.campaign or CAMPAIGN_WORKFLOW_ID}  # fmt: skip
+    if args.daily_cap is not None:
+        overrides["daily_cap"] = args.daily_cap
+    runtime = args.runtime or (Path(os.environ[ENV]) if os.environ.get(ENV) else None)
+    if runtime is not None:
+        return ArenaConfig.from_runtime(RuntimeConfig.load(runtime), **overrides)
+    return ArenaConfig(repo=_repo(), **overrides)
+
+
+def _arena_serve(args: argparse.Namespace) -> int:
+    import uvicorn
+
+    from kintsugi.arena_service import build_app
+
+    cfg = _arena_config(args)
+    app = build_app(cfg, trust_forwarded=args.trust_forwarded)
+    state = "open (sealing into the runtime's store)" if cfg.open else "closed (board only)"
+    print(f"arena: http://{args.host}:{args.port}/ — {state}; campaign {cfg.campaign_id} on "
+          f"{cfg.temporal}")  # fmt: skip
+    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+    return EXIT_OK
 
 
 def _crew_rehearse(args: argparse.Namespace) -> int:
@@ -669,6 +719,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _audit(args)
     if args.command == "econ":
         return _econ(args)
+    if args.command == "arena":
+        return _arena_serve(args)
     if args.command == "onboard":
         from kintsugi.onboard import rehearsal
 

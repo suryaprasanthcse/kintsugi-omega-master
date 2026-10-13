@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KINTSUGI-Ω Arena</title>
+  <meta name="description" content="Omega's fleet, incidents, immunity and ledger, live from GET /api/state; ask for a sealed sabotage through POST /api/sabotage.">
+  <link rel="stylesheet" href="board.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1>KINTSUGI-Ω <span>Arena</span></h1>
+      <p class="tagline">A self-repairing agent fleet. Every number below comes from <code>GET /api/state</code>.</p>
+    </div>
+    <dl class="head" aria-label="Ledger head">
+      <div><dt>Window</dt><dd id="window">…</dd></div>
+      <div><dt>Ledger seq</dt><dd id="ledger-seq">…</dd></div>
+      <div><dt>Head</dt><dd id="ledger-head" class="mono">…</dd></div>
+      <div><dt>Updated</dt><dd id="updated">…</dd></div>
+    </dl>
+  </header>
+
+  <p id="error" class="banner" role="alert" hidden></p>
+
+  <main class="grid">
+    <section class="panel span-2" aria-labelledby="fleet-title">
+      <h2 id="fleet-title">Fleet</h2>
+      <p class="note">Baseline pass rate with its Wilson 95% interval against each host's SLO.</p>
+      <div id="fleet" class="cards"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="incidents-title">
+      <h2 id="incidents-title">Incident stream</h2>
+      <p class="note">Newest ledger entries about incidents, antibodies and sabotage.</p>
+      <ol id="incidents" class="stream"></ol>
+    </section>
+
+    <section class="panel" aria-labelledby="immunity-title">
+      <h2 id="immunity-title">Immunity matrix</h2>
+      <p class="note">Each antibody's latest status per host, from its lineage.</p>
+      <div class="table-wrap"><table id="immunity"></table></div>
+    </section>
+
+    <section class="panel" aria-labelledby="curve-title">
+      <h2 id="curve-title">Learning curve</h2>
+      <p class="note" id="curve-note">Cost per response against response number (log scale), with the Wright refit.</p>
+      <div id="curve" class="chart"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="ledger-title">
+      <h2 id="ledger-title">Ledger &amp; escalations</h2>
+      <dl id="ledger" class="kv"></dl>
+      <h3>Escalations</h3>
+      <ol id="escalations" class="stream"></ol>
+      <h3>Antibodies</h3>
+      <ul id="antibodies" class="plain"></ul>
+    </section>
+
+    <section class="panel span-2" aria-labelledby="sabotage-title">
+      <h2 id="sabotage-title">Sabotage it</h2>
+      <p class="note">Ask Omega's fleet to be attacked. Only environment faults from the catalog are
+        open; every field is an enum or a bounded number. Your request is sealed on arrival and
+        you get its public commitment; the fault itself is revealed after the window.</p>
+      <form id="sabotage" class="form" novalidate>
+        <label>Host <select name="host" id="f-host" required></select></label>
+        <label>Fault class <select name="class" id="f-class" required></select></label>
+        <div id="f-params" class="params"></div>
+        <div class="actions">
+          <button type="submit" id="f-submit">Seal and queue</button>
+          <span id="quota" class="note"></span>
+        </div>
+      </form>
+      <pre id="answer" class="answer" aria-live="polite" hidden></pre>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>Static board, no build step, no external requests: <code>arena/</code> served by
+      <code>kintsugi arena serve</code>. Rehearsal evidence is labelled as such.</p>
+  </footer>
+  <script src="board.js"></script>
+</body>
+</html>

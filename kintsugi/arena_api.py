@@ -15,8 +15,14 @@ text inside the system:
 - **Rate limits.** One accepted request per client per 10 minutes and a daily cap across all
   clients, kept in SQLite. Clients are keyed by a salted SHA-256 of their address, never the
   address itself.
-- **Read side.** ``GET /api/state`` shows the ledger head, the escalations and the antibody
-  states, the Arena board's live inputs.
+- **Read side.** ``GET /api/state`` is the Arena board's only input (``kintsugi.arena_service``
+  composes it: fleet, incident stream, immunity matrix, learning curve, ledger head, escalations,
+  antibodies) plus the "Sabotage it" form's limits.
+- **Unavailable.** Before W the seal port is closed and a valid request answers 503 without
+  spending a limit; a request sealed but not taken by the campaign answers 503 with its public
+  commitment (the id is spent: sealing an id again returns the earlier commitment).
+- **Board.** ``create_app(..., board=Path("arena"))`` serves the static board (``arena/``: plain
+  HTML, CSS and JavaScript, no build step, no external requests) at ``/``.
 
 The model-assisted compiler of the plan (natural language → this schema) is not wired in this
 edition; the deterministic schema is the only way in. Chaos-proxy deliveries are wired at Stage
@@ -107,6 +113,15 @@ class Limited(RuntimeError):
     """A rate limit or the daily cap refused the request (429)."""
 
 
+class Unavailable(RuntimeError):
+    """The Arena cannot take requests now: closed before W, or the campaign is unreachable (503).
+    ``answer`` carries the public commitment when the request was sealed but not queued."""
+
+    def __init__(self, message: str, answer: Mapping[str, Any] | None = None) -> None:
+        super().__init__(message)
+        self.answer = dict(answer or {})
+
+
 @dataclass(frozen=True)
 class Compiled:
     host: str
@@ -194,6 +209,12 @@ class Limiter:
         with self._db() as db:
             return int(db.execute("SELECT COUNT(*) FROM accepted").fetchone()[0])
 
+    def today(self, now: float) -> int:
+        day = datetime.fromtimestamp(now, UTC).strftime("%Y-%m-%d")
+        with self._db() as db:
+            return int(db.execute("SELECT COUNT(*) FROM accepted WHERE day = ?",
+                                  (day,)).fetchone()[0])  # fmt: skip
+
 
 class ArenaService:
     def __init__(
@@ -224,13 +245,32 @@ class ArenaService:
                        not_before=not_before.isoformat(), seed=int(now) % 1_000_000,
                        params=compiled.params)  # fmt: skip
         record = self.seal(spec)
-        self.queue(spec_id, NOT_BEFORE_S)
+        # The id is spent once sealed: a later request must never reuse it, because sealing an
+        # existing id returns the earlier commitment (Saboteur.seal is idempotent per id).
         self.limiter.record(address, now, spec_id)
-        return {"id": spec_id, "c": record["c"], "not_before": record["not_before"],
-                "class": compiled.cls, "host": compiled.host}  # fmt: skip
+        answer = {"id": spec_id, "c": record["c"], "not_before": record["not_before"],
+                  "class": compiled.cls, "host": compiled.host}  # fmt: skip
+        try:
+            self.queue(spec_id, NOT_BEFORE_S)
+        except Exception as error:
+            raise Unavailable(f"{spec_id} is sealed but the campaign did not take it: "
+                              f"{type(error).__name__}", answer) from error  # fmt: skip
+        return answer
+
+    def arena(self) -> dict[str, Any]:
+        """The "Sabotage it" form's limits, for the board."""
+        now = self.clock()
+        return {"daily_cap": self.limiter.daily_cap, "accepted_today": self.limiter.today(now),
+                "window_minutes": int(self.limiter.window_s // 60),
+                "classes": {cls: model.model_json_schema() for cls, model in PARAMS.items()},
+                "tools": {host: list(tools) for host, tools in self.tools.items()}}  # fmt: skip
 
 
-def create_app(service: ArenaService, *, trust_forwarded: bool = False) -> FastAPI:
+def create_app(service: ArenaService, *, trust_forwarded: bool = False,
+               board: Path | None = None) -> FastAPI:  # fmt: skip
+    """The API, plus the static Arena board (``arena/``) at ``/`` when ``board`` is given."""
+    from starlette.concurrency import run_in_threadpool
+
     app = FastAPI(title="kintsugi-arena", docs_url=None, redoc_url=None, openapi_url=None)
 
     def address(request: Request) -> str:
@@ -245,17 +285,26 @@ def create_app(service: ArenaService, *, trust_forwarded: bool = False) -> FastA
             payload = await request.json()
         except ValueError:
             return JSONResponse({"error": "the body must be JSON"}, status_code=400)
-        try:
-            return JSONResponse(service.submit(payload, address(request)), status_code=201)
+        try:  # sealing and the campaign signal block: keep them off the event loop
+            answer = await run_in_threadpool(service.submit, payload, address(request))
+            return JSONResponse(answer, status_code=201)
         except Refused as error:
             return JSONResponse({"error": str(error)}, status_code=400)
         except Limited as error:
             return JSONResponse({"error": str(error)}, status_code=429)
+        except Unavailable as error:
+            return JSONResponse({"error": str(error), **error.answer}, status_code=503)
 
     @app.get("/api/state")
     async def state() -> JSONResponse:
-        return JSONResponse(dict(service.state()))
+        found = dict(await run_in_threadpool(service.state))
+        found.setdefault("arena", service.arena())
+        return JSONResponse(found, headers={"Cache-Control": "no-store"})
 
+    if board is not None:
+        from fastapi.staticfiles import StaticFiles
+
+        app.mount("/", StaticFiles(directory=board, html=True), name="board")
     return app
 
 
