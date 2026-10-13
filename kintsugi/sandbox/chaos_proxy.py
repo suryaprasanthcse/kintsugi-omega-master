@@ -6,8 +6,16 @@ GitHub) goes through ``/{service}/{path}`` on this proxy. Faults are drawn from 
 - ``status``: answer with an HTTP error (e.g. 429) **without** calling the upstream, so a faulted
   call to a side-effecting service has no side effect;
 - ``latency``: add a uniform delay;
-- ``schema_drift``: rename fields in a JSON response;
-- ``partial``: truncate a JSON list (or a text body) to a fraction.
+- ``schema_drift``: rename fields in a JSON response (or, with ``change``, rename, drop or
+  retype every object's first field);
+- ``partial``: truncate a JSON list (or a text body) to a fraction;
+- ``pagination``: return only the first ``page_size`` items of a JSON list, with a
+  ``next_cursor`` in ``cursor_format`` the host has never seen.
+
+Environment sabotage (``env.*``) arrives at run time as overlay rules (``chaos_overlay``),
+drawn under the sabotage's own key so the background profile's draws never move. A ``status``
+rule with ``burst`` > 1 fails a run of calls once it fires; a ``latency`` rule with ``p50_ms``
+and ``p95_ms`` draws a log-normal delay through those percentiles.
 
 Determinism: whether rule *r* fires on a call is ``u < rate`` with
 
@@ -25,13 +33,15 @@ import fnmatch
 import hashlib
 import hmac
 import json
+import math
 import threading
 import time
 from collections import Counter
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from statistics import NormalDist
+from typing import TYPE_CHECKING, Any, Literal
 
 import httpx
 import yaml
@@ -46,9 +56,13 @@ from kintsugi.sandbox.cassette import (
 )
 from kintsugi.sandbox.httpserve import Handler, HttpRequest, HttpResponse, forwardable
 
+if TYPE_CHECKING:
+    from kintsugi.sandbox.chaos_overlay import ChaosOverlay
+
 PROFILES = Path(__file__).with_name("profiles")
 CHAOS_HEADER = "x-kintsugi-chaos"
-FaultKind = Literal["status", "latency", "schema_drift", "partial"]
+FaultKind = Literal["status", "latency", "schema_drift", "partial", "pagination"]
+FAULTS = {"status", "latency", "schema_drift", "partial", "pagination"}
 
 
 @dataclass(frozen=True)
@@ -80,7 +94,7 @@ def load_profile(path: Path) -> Profile:
     for raw in data.get("rules") or []:
         raw = dict(raw)
         service, fault, rate = raw.pop("service"), raw.pop("fault"), float(raw.pop("rate"))
-        if fault not in {"status", "latency", "schema_drift", "partial"}:
+        if fault not in FAULTS:
             raise ValueError(f"unknown fault kind {fault!r}")
         if not 0.0 <= rate <= 1.0:
             raise ValueError(f"rate must be within [0, 1], got {rate}")
@@ -102,24 +116,53 @@ def unit(seed: int, *parts: object) -> float:
 
 @dataclass(frozen=True)
 class Decision:
-    rule: int
+    rule: int | str  # the profile's rule index, or an overlay rule's sabotage key
     fault: FaultKind
     params: Mapping[str, Any]
     draw: float  # the uniform draw that fired (or set the latency)
 
 
+def _fires(seed: int, draw_key: int | str, rule: Rule, service: str, task: str, key: str,
+           occurrence: int) -> bool:  # fmt: skip
+    burst = int(rule.params.get("burst", 1)) if rule.fault == "status" else 1
+    for back in range(max(burst, 1)):  # a firing call starts a run of `burst` failures
+        if occurrence - back < 0:
+            break
+        if unit(seed, draw_key, service, task, key, occurrence - back) < rule.rate:
+            return True
+    return False
+
+
 def decide(
-    profile: Profile, service: str, path: str, task: str, key: str, occurrence: int
+    profile: Profile,
+    service: str,
+    path: str,
+    task: str,
+    key: str,
+    occurrence: int,
+    overlay: Sequence[tuple[str, Rule]] = (),
 ) -> list[Decision]:
     fired: list[Decision] = []
-    for index, rule in enumerate(profile.rules):
+    keyed: list[tuple[int | str, Rule]] = [*enumerate(profile.rules), *overlay]
+    for draw_key, rule in keyed:
         if not rule.applies(service, path):
             continue
-        u = unit(profile.seed, index, service, task, key, occurrence)
-        if u < rule.rate:
-            jitter = unit(profile.seed, "jitter", index, service, task, key, occurrence)
-            fired.append(Decision(index, rule.fault, rule.params, jitter))
+        if _fires(profile.seed, draw_key, rule, service, task, key, occurrence):
+            jitter = unit(profile.seed, "jitter", draw_key, service, task, key, occurrence)
+            fired.append(Decision(draw_key, rule.fault, rule.params, jitter))
     return fired
+
+
+def latency_s(decision: Decision) -> float:
+    """A latency fault's delay: uniform over ``latency_ms``, or log-normal through p50/p95."""
+    params = decision.params
+    if "p50_ms" in params:
+        p50, p95 = float(params["p50_ms"]), float(params["p95_ms"])
+        sigma = 0.0 if p95 <= p50 else (math.log(p95 / p50) / NormalDist().inv_cdf(0.95))
+        z = NormalDist().inv_cdf(min(max(decision.draw, 1e-9), 1 - 1e-9))
+        return p50 * math.exp(sigma * z) / 1000.0
+    low, high = (params.get("latency_ms") or [0, 0])[:2]
+    return (low + (high - low) * decision.draw) / 1000.0
 
 
 def _error_body(status: int) -> dict[str, Any]:
@@ -148,9 +191,47 @@ def _truncate(value: Any, field_name: str | None, keep: float) -> Any:
     return value
 
 
+def _first_key(obj: dict[str, Any]) -> str | None:
+    return sorted(obj)[0] if obj else None
+
+
+def _drift(value: Any, change: str) -> Any:
+    """``env.schema_drift``: every object's first field (sorted) is renamed, dropped or retyped."""
+    if isinstance(value, list):
+        return [_drift(v, change) for v in value]
+    if not isinstance(value, dict):
+        return value
+    name = _first_key(value)
+    out = {k: _drift(v, change) for k, v in value.items()}
+    if name is None:
+        return out
+    if change == "rename_field":
+        out[f"{name}_v2"] = out.pop(name)
+    elif change == "drop_field":
+        out.pop(name)
+    elif change == "type_change":
+        current = out[name]
+        out[name] = str(current) if not isinstance(current, str) else [current]
+    return out
+
+
+def _paginate(value: Any, page_size: int, cursor_format: str) -> Any:
+    """``env.pagination_change``: the first page of the response's list and a new cursor."""
+    cursors = {"opaque": "b3BhcXVlOnBhZ2UtMg", "offset": page_size,
+               "timestamp": "2026-10-12T00:00:00Z"}  # fmt: skip
+    cursor = cursors.get(cursor_format, cursors["opaque"])
+    if isinstance(value, list):
+        return {"items": value[:page_size], "next_cursor": cursor}
+    if isinstance(value, dict):
+        for name in sorted(value):
+            if isinstance(value[name], list):
+                return {**value, name: value[name][:page_size], "next_cursor": cursor}
+    return value
+
+
 def apply_body_faults(response: HttpResponse, decisions: list[Decision]) -> HttpResponse:
-    """Apply schema-drift and partial-response faults to a JSON (or text) upstream response."""
-    shaping = [d for d in decisions if d.fault in {"schema_drift", "partial"}]
+    """Apply schema-drift, partial-response and pagination faults to a JSON (or text) body."""
+    shaping = [d for d in decisions if d.fault in {"schema_drift", "partial", "pagination"}]
     if not shaping or not response.body:
         return response
     try:
@@ -159,8 +240,13 @@ def apply_body_faults(response: HttpResponse, decisions: list[Decision]) -> Http
     except ValueError:
         body, is_json = response.body.decode("utf-8", errors="replace"), False
     for d in shaping:
-        if d.fault == "schema_drift":
+        if d.fault == "schema_drift" and "change" in d.params:
+            body = _drift(body, str(d.params["change"])) if is_json else body
+        elif d.fault == "schema_drift":
             body = _rename(body, dict(d.params.get("rename") or {}))
+        elif d.fault == "pagination":
+            body = (_paginate(body, int(d.params["page_size"]), str(d.params["cursor_format"]))
+                    if is_json else body)  # fmt: skip
         else:
             body = _truncate(body, d.params.get("field"), float(d.params.get("keep", 0.5)))
     raw = json.dumps(body, ensure_ascii=False).encode("utf-8") if is_json else str(body).encode()
@@ -183,11 +269,13 @@ class ChaosProxy:
         sleep: Callable[[float], None] = time.sleep,
         timeout_s: float = 30.0,
         live: frozenset[str] = frozenset(),
+        overlay: ChaosOverlay | None = None,
     ) -> None:
         if recorder is not None and player is not None:
             raise ValueError("record or replay, not both")
         self.upstreams = dict(upstreams)
         self.profile = profile
+        self.overlay = overlay  # environment sabotage delivered at run time (§7.2)
         self.recorder = recorder
         self.player = player
         # Services that hold the host's own state (a books API is the agent's database, not the
@@ -215,12 +303,12 @@ class ChaosProxy:
         with self._lock:
             occurrence = self._seen[(service, request.task, key)]
             self._seen[(service, request.task, key)] += 1
-        decisions = decide(self.profile, service, path, request.task, key, occurrence)
+        extra = self.overlay.rules() if self.overlay is not None else ()
+        decisions = decide(self.profile, service, path, request.task, key, occurrence, extra)
         started = time.monotonic()
         for d in decisions:
             if d.fault == "latency":
-                low, high = (d.params.get("latency_ms") or [0, 0])[:2]
-                self._sleep((low + (high - low) * d.draw) / 1000.0)
+                self._sleep(latency_s(d))
         status_fault = next((d for d in decisions if d.fault == "status"), None)
         if status_fault is not None:
             status = int(status_fault.params.get("status", 429))
@@ -232,9 +320,12 @@ class ChaosProxy:
         if fired:
             response.headers[CHAOS_HEADER] = fired
         latency_ms = int((time.monotonic() - started) * 1000)
-        self.log.append({"service": service, "path": path, "task": request.task,
-                         "occurrence": occurrence, "status": response.status,
-                         "fired": fired})  # fmt: skip
+        row = {"service": service, "path": path, "task": request.task, "occurrence": occurrence,
+               "status": response.status, "fired": fired}  # fmt: skip
+        sabotage = sorted({str(d.params["sabotage"]) for d in decisions if "sabotage" in d.params})
+        if sabotage:
+            row["sabotage"] = ",".join(sabotage)
+        self.log.append(row)
         if self.recorder is not None and service not in self.live:
             self.recorder.record(service, request.task, record, response_record(response),
                                  latency_ms)  # fmt: skip

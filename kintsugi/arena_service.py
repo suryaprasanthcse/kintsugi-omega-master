@@ -58,7 +58,8 @@ class ArenaConfig:
     campaign_id: str = CAMPAIGN_WORKFLOW_ID
     state: Path | None = None  # default: <repo>/.state/arena
     daily_cap: int = DAILY_CAP
-    window: Path | None = None  # default: <repo>/.kintsugi/window.json
+    window: Path | None = None  # default: <ledger_repo>/.kintsugi/window.json
+    ledger_repo: Path | None = None  # the clone holding refs/heads/ledger (default: repo)
 
     @classmethod
     def from_runtime(cls, runtime: RuntimeConfig, **overrides: Any) -> ArenaConfig:
@@ -138,11 +139,12 @@ def load_ledger(cfg: ArenaConfig) -> Any:
     from kintsugi.proof.audit import WINDOW_FILE, Window
     from kintsugi.proof.ledger_branch import BranchLedger
 
-    path = cfg.window or Path(cfg.repo) / WINDOW_FILE
+    repo = Path(cfg.ledger_repo or cfg.repo)
+    path = cfg.window or repo / WINDOW_FILE
     if not path.is_file():
         return _NoLedger()
     window = Window.from_json(json.loads(path.read_text(encoding="utf-8")))
-    return BranchLedger(Path(cfg.repo), window.genesis(), branch=window.ledger_ref)
+    return BranchLedger(repo, window.genesis(), branch=window.ledger_ref)
 
 
 def _json(path: Path) -> dict[str, Any] | None:

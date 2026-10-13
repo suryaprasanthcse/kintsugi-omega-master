@@ -26,7 +26,7 @@ import json
 import random
 import socket
 import sys
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -174,6 +174,46 @@ def to_exports(spans: Iterable[Any]) -> dict[str, dict[str, Any]]:
                                "body": {"data": {"page": page, "spans": raws},
                                         "success": True}},
         }  # fmt: skip
+    return exports
+
+
+def task_costs(chaos_log: Iterable[Mapping[str, Any]], prices: Mapping[str, float],
+               llm_charges: Iterable[Mapping[str, Any]] = ()) -> dict[str, float]:  # fmt: skip
+    """Each task's metered cost: its paid external calls (the chaos proxy's log priced by the
+    host's ``service_costs_usd``) plus the LLM spend the metering proxy charged to it."""
+    costs: dict[str, float] = {}
+    for row in chaos_log:
+        task = str(row["task"])
+        costs[task] = costs.get(task, 0.0) + float(prices.get(str(row["service"]), 0.0))
+    for charge in llm_charges:
+        task = str(charge["task"])
+        costs[task] = costs.get(task, 0.0) + float(charge["cost_usd"])
+    return {task: round(cost, 8) for task, cost in costs.items()}
+
+
+def apply_costs(exports: dict[str, dict[str, Any]], costs: Mapping[str, float]) -> int:
+    """Write each trace's metered cost into its ``trace.json`` (``totalCostUsd``); returns how
+    many traces got one. The root span carries the same total, as neatlogs reports it."""
+    priced = 0
+    for files in exports.values():
+        summary = files["trace.json"]["body"]["data"]
+        task = str(summary.get("traceName") or "").removeprefix("task:")
+        if task in costs:
+            summary["totalCostUsd"] = costs[task]
+            for row in files["spans.json"]["body"]["data"]["spans"]:
+                if row["parentSpanId"] is None:
+                    row["costUsd"] = costs[task]
+            priced += 1
+    return priced
+
+
+def read_exports(out: Path) -> dict[str, dict[str, Any]]:
+    exports: dict[str, dict[str, Any]] = {}
+    for folder in sorted(p for p in Path(out).iterdir() if (p / "trace.json").is_file()):
+        exports[folder.name] = {
+            name: json.loads((folder / name).read_text(encoding="utf-8"))
+            for name in ("trace.json", "spans.json", "raw_spans.json")
+        }
     return exports
 
 

@@ -25,6 +25,22 @@ body:
       placeholder: agent/main.py
     validations:
       required: true
+  - type: input
+    id: run-command
+    attributes:
+      label: Run command
+      description: how you run the agent locally (optional)
+      placeholder: python -m agent.main
+    validations:
+      required: false
+  - type: input
+    id: model-provider
+    attributes:
+      label: Model provider
+      description: which model API the agent calls (optional)
+      placeholder: anthropic
+    validations:
+      required: false
   - type: textarea
     id: problem
     attributes:

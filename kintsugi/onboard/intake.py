@@ -32,6 +32,8 @@ class Intake:
     entry_point: str  # the agent's entry point, a path inside the repository
     description: str
     consents: tuple[str, ...]
+    run_command: str | None = None  # how the maintainers run the agent (§5.9.4 O1)
+    model_provider: str | None = None
 
     @property
     def foreign(self) -> bool:
@@ -68,4 +70,13 @@ def parse(body: str) -> Intake:
     missing = [c for c in CONSENTS if c not in checked]
     if missing:
         raise IntakeRefused(f"consent missing: {missing}")
-    return Intake(repo, entry, found.get("What goes wrong", "")[:2000], checked)
+    run = _optional(found.get("Run command", ""), 500)
+    provider = _optional(found.get("Model provider", ""), 100)
+    return Intake(repo, entry, found.get("What goes wrong", "")[:2000], checked,
+                  run_command=run, model_provider=provider)  # fmt: skip
+
+
+def _optional(value: str, limit: int) -> str | None:
+    """An optional answer; GitHub renders an empty one as ``_No response_``."""
+    text = value.strip().strip("`").strip()
+    return None if not text or text == "_No response_" else text[:limit]

@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from kintsugi.sandbox import proc
+from kintsugi.sandbox.chaos_overlay import OVERLAY_DIR, ChaosOverlay
 
 from .baseline import run_eval
 from .fabric import Fabric, FabricConfig
@@ -136,8 +137,10 @@ class Runtime:
         started = time.monotonic()
         due = {h: started + gap() for h, gap in next_gap.items()}
         next_poll = started
+        # Environment sabotage the crew delivers lands in the same state directory (§7.2).
+        overlay = ChaosOverlay(self.state_dir / OVERLAY_DIR)
         config = FabricConfig(seed=self.seed, spend_path=self.state_dir / "spend.sqlite",
-                              anthropic_key=self.anthropic_key)  # fmt: skip
+                              anthropic_key=self.anthropic_key, overlay=overlay)  # fmt: skip
         (self.state_dir).mkdir(parents=True, exist_ok=True)
         with Fabric(self.hosts, config) as fabric, cf.ThreadPoolExecutor(max_workers=4) as pool:
             n = 0

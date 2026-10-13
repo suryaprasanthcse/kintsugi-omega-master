@@ -39,5 +39,9 @@ def baseline(records: Sequence[TraceRecord]) -> dict[str, Any]:
     passed = sum(1 for r in records
                  if not r.failed and all(v.passed for v in r.verdicts))  # fmt: skip
     low, high = wilson_interval(passed, n) if n else (0.0, 0.0)
+    durations = sorted(r.duration_ms for r in records)
+    p95 = durations[max(0, -(-95 * n // 100) - 1)] if n else 0.0  # nearest-rank p95
     return {"traces": n, "passed": passed, "pass_rate": round(passed / n, 4) if n else 0.0,
-            "wilson_95": [round(low, 4), round(high, 4)]}  # fmt: skip
+            "wilson_95": [round(low, 4), round(high, 4)],
+            "cost_usd": round(sum(r.cost_usd for r in records), 6),
+            "p95_duration_ms": round(float(p95), 3)}  # fmt: skip

@@ -56,9 +56,11 @@ from kintsugi.econ.cortex import PLAN_FILE, Cortex
 from kintsugi.gates.holdout import _inside_git_worktree
 from kintsugi.gates.target import load_target, target_hosts
 from kintsugi.memory.library import AntibodyLibrary
+from kintsugi.onboard.desk import OnboardingDesk
 from kintsugi.proof import attest
 from kintsugi.proof.audit import WINDOW_FILE, Window
 from kintsugi.proof.ledger_branch import BranchLedger
+from kintsugi.sandbox.chaos_overlay import ChaosOverlay
 
 ENV = "KINTSUGI_RUNTIME"
 ANCHOR_WORKFLOW_ID = "audit-anchor"
@@ -221,9 +223,11 @@ def build(cfg: RuntimeConfig) -> OmegaCrew:
                           remote=cfg.remote if cfg.push_ledger else None)  # fmt: skip
     cortex = Cortex.from_repo(repo) if (repo / PLAN_FILE).is_file() else None  # Stage 9
     treater = Treater(notary, Reverter(notary, RevertConfig(remote=cfg.remote), github=gh))
+    onboarding = OnboardingDesk(state / "onboarding", AntibodyLibrary(repo / "antibodies"))
     return OmegaCrew(ctx, runner=lambda: surgeon, shipper=shipper, ledger=ledger,
                      immunity=immunity, anchoring=anchoring, cortex=cortex, treater=treater,
-                     sabotage=sabotage_lane(cfg, notary, gh, tuple(targets)))  # fmt: skip
+                     sabotage=sabotage_lane(cfg, notary, gh, tuple(targets)),
+                     onboarding=onboarding)  # fmt: skip
 
 
 def sabotage_lane(
@@ -239,7 +243,9 @@ def sabotage_lane(
     upstream = UpstreamConfig(remote=cfg.remote, checks=cfg.upstream_checks)
     lane = UpstreamLane(cfg.repo, notary, github, upstream)
     identity = sab.identity.read_text(encoding="ascii").strip()
-    return SabotageLane(saboteur, identity, deliver=lane.deliver, publish=lane.publish)
+    overlay = ChaosOverlay.for_fleet(cfg.state_dir, cfg.repo)  # env.* and Arena requests
+    return SabotageLane(saboteur, identity, deliver=lane.deliver, publish=lane.publish,
+                        chaos=overlay.deliver)  # fmt: skip
 
 
 def crew() -> OmegaCrew:

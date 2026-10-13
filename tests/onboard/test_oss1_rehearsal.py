@@ -65,6 +65,38 @@ def test_captured_spans_export_in_the_public_api_shape_and_replay(tmp_path: Path
     assert (repro.host, repro.task_id, repro.split, repro.seed) == ("pkg", "T-1", "train", 3)
 
 
+def test_model_spans_carry_tokens_and_traces_carry_metered_costs(tmp_path: Path) -> None:
+    memory = InMemorySpanExporter()
+    provider = TracerProvider(id_generator=trace_export.seeded_ids(9))
+    provider.add_span_processor(SimpleSpanProcessor(memory))
+    tracer = provider.get_tracer("test")
+    root = {"openinference.span.kind": "WORKFLOW", "neatlogs.workflow_name": "host:pkg"}
+    model = {"openinference.span.kind": "LLM", "llm.model_name": "claude-haiku-5-5",
+             "llm.provider": "anthropic", "llm.token_count.prompt": 554,
+             "llm.token_count.completion": 184}  # fmt: skip
+    with (tracer.start_as_current_span("task:T-9", attributes=root),
+          tracer.start_as_current_span("claude-haiku-5-5", attributes=model)):  # fmt: skip
+        pass
+    exports = trace_export.to_exports(memory.get_finished_spans())
+    [files] = exports.values()
+    summary = files["trace.json"]["body"]["data"]
+    assert (summary["totalTokens"], summary["llmCallsCount"]) == (738, 1)
+    llm = next(s for s in files["spans.json"]["body"]["data"]["spans"] if s["spanType"] == "LLM")
+    assert (llm["promptTokens"], llm["completionTokens"], llm["totalTokens"]) == (554, 184, 738)
+    assert (llm["model"], llm["provider"]) == ("claude-haiku-5-5", "anthropic")
+    costs = trace_export.task_costs(
+        [{"task": "T-9", "service": "geo"}, {"task": "T-9", "service": "crm"},
+         {"task": "T-1", "service": "geo"}], {"geo": 0.0001, "crm": 0.0003},
+        [{"task": "T-9", "cost_usd": 0.0021}])  # fmt: skip
+    assert costs == {"T-9": pytest.approx(0.0025), "T-1": pytest.approx(0.0001)}
+    assert trace_export.apply_costs(exports, costs) == 1
+    assert summary["totalCostUsd"] == pytest.approx(0.0025)
+    trace_export.write_exports(exports, tmp_path)
+    [record] = replay_mode.ExportedTraces(tmp_path).records()
+    assert record.cost_usd == pytest.approx(0.0025)
+    assert record.total_tokens == 738
+
+
 def test_seeded_ids_export_the_same_ids_for_the_same_seed() -> None:
     assert list(trace_export.to_exports(_spans(5))) == list(trace_export.to_exports(_spans(5)))
     assert list(trace_export.to_exports(_spans(5))) != list(trace_export.to_exports(_spans(6)))
@@ -126,15 +158,18 @@ def test_the_rehearsal_onboards_o1_to_o7_offline(summary: dict[str, Any]) -> Non
     assert exports["tasks"] == exports["traces"] == 8
     assert sum(exports["verdicts"].values()) == 8
     assert exports["model_mode"] == "offline"
+    assert exports["priced_traces"] == 8  # every trace carries its metered cost
+    assert exports["metered_cost_usd"] > 0
     assert record["O1_intake"]["consents"] == 5
     assert record["O1_intake"]["foreign"] is True
-    assert record["O3_replay"]["traces"] == 8
+    assert record["O6_baseline"]["replay"]["traces"] == 8
+    assert record["O6_baseline"]["cost_usd"] == pytest.approx(exports["metered_cost_usd"])
     failed = sum(n for verdict, n in exports["verdicts"].items() if verdict != "PASS")
-    assert record["O5_baseline"]["passed"] == 8 - failed
-    assert record["O7_receipt"] == {"pr_only": True, "merge": False,
-                                    "foreign_posts": "each one waits for the Architect's "
-                                                     "approval"}  # fmt: skip
-    scan = record["O6_immune_scan"]
+    assert record["O6_baseline"]["passed"] == 8 - failed
+    assert record["O7_immune_scan"]["receipt"] == {
+        "pr_only": True, "merge": False,
+        "foreign_posts": "each one waits for the Architect's approval"}  # fmt: skip
+    scan = record["O7_immune_scan"]
     assert scan["status"] in {"scanned", "skipped"}  # skipped where entire-graph is missing
     if scan["status"] == "scanned":
         assert {m["antibody"] for m in scan["matches"]} == {"AB-1@1.1"}
@@ -151,21 +186,38 @@ def test_the_same_seed_exports_the_same_traces(summary: dict[str, Any], tmp_path
     again = rehearsal.run(rehearsal.OnboardRehearsal("oss1-again", tmp_path / "run", seed=1,
                                                      limit=8, log=lambda line: None))  # fmt: skip
     assert again["exports"]["verdicts"] == summary["exports"]["verdicts"]
-    assert [e["source_trace"] for e in again["onboarding"]["O4_evals"]] == [
-        e["source_trace"] for e in summary["onboarding"]["O4_evals"]]  # fmt: skip
+    assert [e["source_trace"] for e in again["onboarding"]["O5_evals"]["seeds"]] == [
+        e["source_trace"] for e in summary["onboarding"]["O5_evals"]["seeds"]]  # fmt: skip
+    assert again["exports"]["metered_cost_usd"] == summary["exports"]["metered_cost_usd"]
+
+
+def _receipt_and_replay(onboarding: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    """The receipt and the replayed trace count, in either record format: the A-74 run's
+    (O3_replay, O7_receipt) or the desk's §5.9.4 steps (O6_baseline, O7_immune_scan)."""
+    if "O7_immune_scan" in onboarding:
+        return onboarding["O7_immune_scan"]["receipt"], onboarding["O6_baseline"]["replay"][
+            "traces"]  # fmt: skip
+    return onboarding["O7_receipt"], onboarding["O3_replay"]["traces"]
 
 
 @pytest.mark.skipif(not EVIDENCE, reason="no committed OSS-1 rehearsal evidence")
-def test_the_committed_evidence_is_an_offline_pr_only_onboarding() -> None:
-    evidence = json.loads(EVIDENCE[-1].read_text(encoding="utf-8"))
+@pytest.mark.parametrize("path", EVIDENCE, ids=[p.stem for p in EVIDENCE])
+def test_every_committed_evidence_is_an_offline_pr_only_onboarding(path: Path) -> None:
+    evidence = json.loads(path.read_text(encoding="utf-8"))
     assert evidence["kind"] == "onboarding-rehearsal"
     assert evidence["phase"] == "rehearsal"
     assert evidence["network"]["non_loopback_connections_refused"] == 0
     assert evidence["network"]["foreign_posts"] == 0
     assert evidence["onboarding"]["O1_intake"]["consents"] == 5
-    assert evidence["onboarding"]["O7_receipt"]["pr_only"] is True
-    assert evidence["onboarding"]["O7_receipt"]["merge"] is False
-    assert evidence["exports"]["traces"] == evidence["onboarding"]["O3_replay"]["traces"]
+    receipt, replayed = _receipt_and_replay(evidence["onboarding"])
+    assert receipt["pr_only"] is True
+    assert receipt["merge"] is False
+    assert evidence["exports"]["traces"] == replayed
+
+
+@pytest.mark.skipif(not EVIDENCE, reason="no committed OSS-1 rehearsal evidence")
+def test_the_newest_evidence_matches_the_committed_fixtures() -> None:
+    evidence = json.loads(EVIDENCE[-1].read_text(encoding="utf-8"))
     assert evidence["intake"]["sha256"] == rehearsal._sha(rehearsal.INTAKE)
     assert evidence["checkout"]["sha256"] == rehearsal._tree_sha(rehearsal.PRACTICE)
 

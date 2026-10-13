@@ -90,25 +90,67 @@ def test_the_state_before_t0_reads_committed_facts_only(tmp_path: Path) -> None:
     assert curve["points"][1]["ref"] == "INC-R235459-0001"
 
 
-def test_the_state_inside_w_shows_the_ledger(tmp_path: Path,
-                                             monkeypatch: pytest.MonkeyPatch) -> None:  # fmt: skip
-    from kintsugi.crew.factory import FileLedger
-    from kintsugi.proof.ledger import genesis_hash
+@pytest.fixture
+def w_repo(tmp_path: Path) -> tuple[Path, str]:
+    """A scratch clone at T0: the window record and the ledger branch's genesis entry, written
+    by the real ``kintsugi t0 genesis`` path (no monkeypatching)."""
+    from datetime import UTC, datetime, timedelta
 
-    ledger = FileLedger(tmp_path / "ledger.jsonl", genesis_hash("t0", b"\0" * 32))
-    ledger.append({"type": "genesis"})
+    from kintsugi.control.genesis import write_genesis
+    from kintsugi.proof import attest
+    from kintsugi.sandbox import proc
+    from tests.helpers.checkpoints import git
+
+    if proc.which("git") is None:
+        pytest.skip("git is not installed")
+    origin, path = tmp_path / "origin.git", tmp_path / "omega"
+    proc.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], timeout_s=30, check=True)
+    proc.run(["git", "init", "-q", "-b", "main", str(path)], timeout_s=30, check=True)
+    git(path, "config", "user.name", "Surya Prasanth R")
+    git(path, "config", "user.email", "suryaprasanthcse@gmail.com")
+    (path / ".kintsugi").mkdir()
+    (path / ".kintsugi" / "holdout.sha256").write_text("# manifest\n", encoding="utf-8")
+    signer = attest.Ed25519Signer.generate()
+    (path / ".kintsugi" / "attest.pub").write_text(signer.public_key_openssh() + "\n",
+                                                   encoding="utf-8")  # fmt: skip
+    git(path, "add", "-A")
+    git(path, "commit", "-q", "-m", "base")
+    git(path, "remote", "add", "origin", str(origin))
+    git(path, "push", "-q", "origin", "main")
+    t0 = (datetime.now(UTC) - timedelta(minutes=1)).replace(microsecond=0)
+    made = write_genesis(path, github_repo="o/r", rulesets=[7], t0=t0.isoformat())
+    return path, made.genesis
+
+
+def test_the_state_inside_w_reads_the_real_ledger_branch(
+    tmp_path: Path, w_repo: tuple[Path, str]
+) -> None:
+    from kintsugi.proof.ledger_branch import BranchLedger
+
+    repo, genesis = w_repo
+    ledger = BranchLedger(repo, genesis)
     ledger.append({"type": "incident", "incident": "INC-0001", "host": "ledger"})
     ledger.append({"type": "transition", "incident": "INC-0001",
                    "transition": {"source": "OPEN", "target": "TRIAGED"}})  # fmt: skip
     ledger.append({"type": "escalate", "incident": "INC-0001", "reason": "no repair budget (L5)"})
     ledger.append({"type": "note", "text": "not an incident entry"})
-    monkeypatch.setattr(svc, "load_ledger", lambda cfg: ledger)
-    state = svc.arena_state(_cfg(tmp_path, sabotage=False))
+    cfg = svc.ArenaConfig(repo=REPO, ledger_repo=repo, state=tmp_path / "arena")
+    loaded = svc.load_ledger(cfg)
+    assert isinstance(loaded, BranchLedger)
+    assert [e["type"] for e in loaded.entries()] == ["genesis", "incident", "transition",
+                                                     "escalate", "note"]  # fmt: skip
+    state = svc.arena_state(cfg)
     assert state["window"] == "open"
-    assert state["ledger"]["seq"] == 5
+    assert state["ledger"] == {"seq": 5, "h": loaded.entries()[-1]["hash"]}
     assert [i["type"] for i in state["incidents"]] == ["escalate", "transition", "incident"]
+    assert [i["seq"] for i in state["incidents"]] == [4, 3, 2]  # the ledger's own numbering
     assert state["incidents"][1]["summary"] == "OPEN → TRIAGED"
     assert state["escalations"][0]["reason"] == "no repair budget (L5)"
+
+
+def test_without_a_window_record_the_ledger_is_empty(tmp_path: Path) -> None:
+    cfg = svc.ArenaConfig(repo=REPO, ledger_repo=tmp_path, state=tmp_path / "arena")
+    assert svc.load_ledger(cfg).entries() == ()
 
 
 def test_the_incident_stream_is_bounded_and_newest_first() -> None:

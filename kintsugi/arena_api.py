@@ -52,6 +52,7 @@ from kintsugi.crew.saboteur import CATALOG, compose
 WINDOW_S = 600.0  # one request per client per 10 minutes
 DAILY_CAP = 20
 NOT_BEFORE_S = 300.0  # sealed now, delivered no sooner than five minutes later
+FAULT_DURATION_S = 1800.0  # an Arena fault stays active for 30 minutes once delivered
 FRAMING = "Arena request"
 
 Rate = Annotated[float, Field(ge=0.01, le=0.5, strict=True)]
@@ -243,7 +244,7 @@ class ArenaService:
         spec = compose(spec_id, compiled.cls, host=compiled.host, framing=FRAMING,
                        ground_truth={"files": [], "mechanism": compiled.cls},
                        not_before=not_before.isoformat(), seed=int(now) % 1_000_000,
-                       params=compiled.params)  # fmt: skip
+                       params=compiled.params, duration_s=FAULT_DURATION_S)  # fmt: skip
         record = self.seal(spec)
         # The id is spent once sealed: a later request must never reuse it, because sealing an
         # existing id returns the earlier commitment (Saboteur.seal is idempotent per id).

@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from kintsugi.control import contracts as c
-from kintsugi.control.activities import StepContext
+from kintsugi.control.activities import DeliveryRefused, StepContext
 from kintsugi.control.revert import Reverter, RevertRecord
 from kintsugi.control.surgeon_step import AttemptLog, SessionRunner, SurgeonStep
 from kintsugi.crew.archivist import Archivist
@@ -47,6 +47,7 @@ from kintsugi.gates.checkout import rev
 from kintsugi.memory.antibody import Antibody, AntibodyState
 from kintsugi.memory.graph import GraphError
 from kintsugi.memory.library import AntibodyLibrary, LibraryError
+from kintsugi.onboard.desk import OnboardingDesk
 from kintsugi.proof.anchor import post_text
 from kintsugi.proof.attest import Signer
 from kintsugi.proof.ledger import Ledger, genesis_hash
@@ -100,13 +101,16 @@ class SabotageLane:
     specs; only this lane holds it. ``plans`` are specs not sealed yet (sealed before T0 by
     default). ``publish`` commits a commitment record through a notary (inside W);
     ``deliver(request, host)`` runs the delivery notary in a worktree of the host and ships it
-    through the upstream lane, returning a reference."""
+    through the upstream lane, returning a reference. ``chaos(spec)`` delivers an environment
+    class (``env.*``, Arena requests included) as chaos-proxy overlay rules
+    (``kintsugi.sandbox.chaos_overlay``), returning a reference."""
 
     saboteur: Saboteur
     identity: str
     deliver: Callable[[NotaryRequest, str], str]
     plans: Mapping[str, tuple[dict[str, Any], str | None]] = field(default_factory=dict)
     publish: Callable[[NotaryRequest], str] | None = None
+    chaos: Callable[[Mapping[str, Any]], str] | None = None
 
 
 class Shipper:
@@ -153,9 +157,11 @@ class OmegaCrew:
         sabotage: SabotageLane | None = None,
         cortex: Cortex | None = None,  # Stage 9: business plan + live actuals behind budgets
         treater: Treater | None = None,  # Stage 9: applies an L5 treatment the governor chose
+        onboarding: OnboardingDesk | None = None,  # Stage 10: O1–O7 for registered hosts
     ) -> None:
         self.ctx = ctx
         self.treater = treater
+        self.onboarding = onboarding
         self.runner = runner
         self.shipper = shipper
         self.fixes = fixes
@@ -475,10 +481,27 @@ class OmegaCrew:
                                             "+00:00"))  # fmt: skip
         if datetime.now(UTC) < not_before:
             raise SabotageRefused(f"{spec_id}: not before {spec['schedule']['not_before']}")
-        if patch is None:
-            raise NotImplementedError(f"{spec['class']}: only patch deliveries are wired")
-        lane.deliver(lane.saboteur.delivery_request(spec, patch), str(spec["target"]["host"]))
-        self.ledger.append({"type": "sabotage", "event": "delivered", "sabotage": spec_id})
+        mine = [e for e in self.ledger.entries() if e.get("sabotage") == spec_id]
+        if any(e.get("event") == "delivered" for e in mine):
+            return  # a retried step after the delivery landed
+        mode = str(spec["delivery"].get("mode"))
+        if patch is not None:
+            ref = lane.deliver(lane.saboteur.delivery_request(spec, patch),
+                               str(spec["target"]["host"]))  # fmt: skip
+        elif mode == "chaos_proxy" and lane.chaos is not None:
+            ref = lane.chaos(spec)
+        else:
+            raise DeliveryRefused(f"{spec_id}: no delivery port for {spec['class']} ({mode})")
+        self.ledger.append({"type": "sabotage", "event": "delivered", "sabotage": spec_id,
+                            "mode": mode, "ref": str(ref)})  # fmt: skip
+
+    def do_onboard_step(self, step: StepContext, host: str, name: str) -> c.StepResult:
+        """Stage 10: one of O1–O7 for a host registered with the onboarding desk (§5.9.4).
+        A failed step ends the ``Onboarding`` workflow with its reason; nothing is retried
+        into a foreign repository."""
+        if self.onboarding is None:
+            return c.StepResult(name, False, {"error": "no onboarding desk is configured"})
+        return self.onboarding.step(host, name)
 
     def do_anchor_ledger(self, step: StepContext, hour: int) -> str:
         """AuditAnchor's hourly step: sign the head, write the post text; returns the tag."""

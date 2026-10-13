@@ -204,3 +204,50 @@ def test_crew_steps_seal_deliver_and_satisfy_c6(
     result = audit.c6_sabotage([saboteur.record("S-90") or {}], {"S-90": reveal}, entries,
                                lambda token: [], window_closed=True)  # fmt: skip
     assert result.status is Status.PASS, result.problems
+
+
+def _env_spec() -> dict[str, Any]:
+    return compose("S-A0001", "env.rate_limit", host="practice", framing="Arena request",
+                   ground_truth={"files": [], "mechanism": "env.rate_limit"},
+                   not_before=(NOW - timedelta(minutes=1)).isoformat(), seed=7,
+                   params={"tool": "fetch", "rate": 0.2, "burst": 2},
+                   duration_s=900.0)  # fmt: skip
+
+
+def test_an_environment_spec_is_delivered_through_the_chaos_port(
+    saboteur: Saboteur, identity: tuple[str, str], tmp_path: Path
+) -> None:
+    """An Arena request (env.*) has no patch: it goes to the chaos overlay, once."""
+    spec = _env_spec()
+    saboteur.seal(spec)
+    injected: list[dict[str, Any]] = []
+    lane = SabotageLane(
+        saboteur,
+        identity[0],
+        deliver=lambda req, host: "never",
+        chaos=lambda s: injected.append(dict(s)) or "overlay/S-A0001.json",
+    )
+    ledger = FileLedger(tmp_path / "ledger.jsonl", genesis_hash("t0", b"\0" * 32))
+    crew = SimpleNamespace(ledger=ledger, sabotage=lane, _lane=lambda: lane)
+    OmegaCrew.do_deliver_sabotage(crew, None, "S-A0001")  # type: ignore[arg-type]
+    OmegaCrew.do_deliver_sabotage(crew, None, "S-A0001")  # type: ignore[arg-type]  (a retry)
+    assert [s["target"]["tool"] for s in injected] == ["fetch"]  # delivered exactly once
+    [entry] = list(ledger.entries())
+    assert (entry["event"], entry["mode"], entry["ref"]) == ("delivered", "chaos_proxy",
+                                                             "overlay/S-A0001.json")  # fmt: skip
+
+
+def test_a_spec_without_a_delivery_port_is_refused_without_retries(
+    saboteur: Saboteur, identity: tuple[str, str], tmp_path: Path
+) -> None:
+    from kintsugi.control.activities import NON_RETRYABLE, SPECS, DeliveryRefused
+
+    saboteur.seal(_env_spec())
+    lane = SabotageLane(saboteur, identity[0], deliver=lambda req, host: "never")  # no chaos
+    ledger = FileLedger(tmp_path / "ledger.jsonl", genesis_hash("t0", b"\0" * 32))
+    crew = SimpleNamespace(ledger=ledger, sabotage=lane, _lane=lambda: lane)
+    with pytest.raises(DeliveryRefused, match="no delivery port"):
+        OmegaCrew.do_deliver_sabotage(crew, None, "S-A0001")  # type: ignore[arg-type]
+    assert DeliveryRefused in NON_RETRYABLE
+    assert "DeliveryRefused" in SPECS["deliver_sabotage"].non_retryable
+    assert list(ledger.entries()) == []

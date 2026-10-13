@@ -21,6 +21,7 @@ from typing import Any
 from kintsugi.sandbox import chaos_proxy as chaos
 from kintsugi.sandbox import llm_proxy as lp
 from kintsugi.sandbox.cassette import Player, Recorder
+from kintsugi.sandbox.chaos_overlay import ChaosOverlay
 from kintsugi.sandbox.httpserve import Handler, HttpRequest, HttpResponse, Server
 from kintsugi.sandbox.runner import PROXY_PLACEHOLDER
 
@@ -72,6 +73,7 @@ class FabricConfig:
     llm_recorder: Recorder | None = None
     player: Player | None = None  # replay a cassette: tool and model I/O, faults included
     live_services: tuple[str, ...] = ()  # the host's own state: never recorded or replayed
+    overlay: ChaosOverlay | None = None  # environment sabotage delivered at run time
 
 
 class Fabric:
@@ -107,7 +109,7 @@ class Fabric:
         profile = config.profile.with_seed(config.seed)
         self.chaos = chaos.ChaosProxy(
             services, profile, recorder=config.chaos_recorder, player=config.player,
-            live=frozenset(config.live_services),
+            live=frozenset(config.live_services), overlay=config.overlay,
         )  # fmt: skip
         self.llm = lp.LlmProxy(upstream, self.spend, self.tokens, recorder=config.llm_recorder)
         self._servers = [Server(self.llm, host=config.bind), Server(self.chaos, host=config.bind)]

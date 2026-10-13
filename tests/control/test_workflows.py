@@ -501,6 +501,42 @@ def test_sabotage_is_sealed_before_any_delivery() -> None:
     assert names[:first_delivery].count("seal_sabotage") >= 2
 
 
+def test_a_failed_delivery_never_stops_the_sealed_schedule() -> None:
+    """An Arena request that cannot be delivered (refused, or out of retries) is recorded and
+    the campaign delivers the sealed faults behind it (campaign-delivery-guard)."""
+    from kintsugi.control.activities import DeliveryRefused
+
+    ledger: list[dict[str, Any]] = []
+
+    def deliver(spec_id: str) -> None:
+        if spec_id == "S-A0001":
+            raise DeliveryRefused("S-A0001: no delivery port for env.rate_limit")
+        if spec_id == "S-A0002":
+            raise RuntimeError("transient failure on every attempt")
+
+    async def scenario() -> tuple[list[str], dict[str, str]]:
+        crew = crew_for(Scenario())
+        crew.answers["deliver_sabotage"] = deliver
+        crew.answers["ledger_append"] = lambda entry: ledger.append(entry) or "h"
+        campaign = Campaign(specs=[("S-17", 3600.0), ("S-18", 7200.0)])
+        async with temporal(crew) as (_env, client):
+            handle = await client.start_workflow(SabotageCampaign.run, args=[campaign, FAST],
+                                                 id="sab-guard", task_queue=CREW)  # fmt: skip
+            await handle.signal(SabotageCampaign.request, args=["S-A0001", 60.0])
+            await handle.signal(SabotageCampaign.request, args=["S-A0002", 120.0])
+            await handle.signal(SabotageCampaign.close)
+            delivered = await handle.result()
+            failures = await handle.query(SabotageCampaign.failures)
+        return delivered, failures
+
+    delivered, failures = run(scenario())
+    assert delivered == ["S-17", "S-18"]  # the sealed schedule survives both failures
+    assert set(failures) == {"S-A0001", "S-A0002"}
+    assert "DeliveryRefused" in failures["S-A0001"]
+    assert [(e["event"], e["sabotage"]) for e in ledger] == [
+        ("delivery-failed", "S-A0001"), ("delivery-failed", "S-A0002")]  # fmt: skip
+
+
 def test_the_audit_anchor_ticks_hourly_and_continues_as_new() -> None:
     async def scenario() -> list[str]:
         crew = crew_for(Scenario())

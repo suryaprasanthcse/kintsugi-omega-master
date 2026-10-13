@@ -57,7 +57,11 @@ class ProtectedPathViolation(Exception):
     """surgeon: the attempt touched a protected path (non-retryable; §5.11)."""
 
 
-NON_RETRYABLE = (InvalidAlert, BudgetExceeded, ProtectedPathViolation)
+class DeliveryRefused(Exception):
+    """A sealed sabotage cannot be delivered (no port for its class): retrying cannot help."""
+
+
+NON_RETRYABLE = (InvalidAlert, BudgetExceeded, ProtectedPathViolation, DeliveryRefused)
 
 
 # --------------------------------------------------------------------------- the §5.3.2 table
@@ -192,7 +196,7 @@ _TABLE: tuple[ActivitySpec, ...] = (
                  lambda host, step: (host, step)),
     ActivitySpec("seal_sabotage", 5 * M, None, 3, (), CREW,
                  lambda spec_id: (spec_id, "seal")),
-    ActivitySpec("deliver_sabotage", 10 * M, None, 3, (), CREW,
+    ActivitySpec("deliver_sabotage", 10 * M, None, 3, ("DeliveryRefused",), CREW,
                  lambda spec_id: (spec_id, "deliver")),
     ActivitySpec("anchor_ledger", 5 * M, None, 5, (), CREW,
                  lambda hour: (hour, "anchor")),

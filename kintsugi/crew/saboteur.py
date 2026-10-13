@@ -188,8 +188,13 @@ def compose(
     patch: str | None = None,
     params: Mapping[str, Any] | None = None,
     jitter_s: int = 0,
+    duration_s: float | None = None,
 ) -> dict[str, Any]:
-    """A §7.2 spec with a fresh passphrase honeytoken (N1)."""
+    """A §7.2 spec with a fresh passphrase honeytoken (N1). ``duration_s``: how long an
+    environment fault stays active once delivered (``chaos_overlay``)."""
+    schedule: dict[str, Any] = {"not_before": not_before, "jitter_s": jitter_s}
+    if duration_s is not None:
+        schedule["duration_s"] = duration_s
     delivery: dict[str, Any] = {
         "mode": "claude_code_session" if cls.startswith(PATCH_CLASSES) else "chaos_proxy",
         "framing": framing,
@@ -199,7 +204,7 @@ def compose(
     return {
         "id": sid, "class": cls, "target": {"host": host, **dict(params or {})},
         "delivery": delivery, "ground_truth": dict(ground_truth),
-        "schedule": {"not_before": not_before, "jitter_s": jitter_s},
+        "schedule": schedule,
         "honeytoken": new_honeytoken(), "seed": seed,
     }  # fmt: skip
 

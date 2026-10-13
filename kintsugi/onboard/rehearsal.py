@@ -42,6 +42,7 @@ from kintsugi.gates.target import load_target
 from kintsugi.memory.library import AntibodyLibrary
 from kintsugi.onboard import pipeline, trace_export
 from kintsugi.sandbox import proc
+from kintsugi.sandbox.llm_proxy import account_of
 
 OMEGA = Path(__file__).resolve().parents[2]
 PRACTICE = OMEGA / "tests" / "fixtures" / "rehearsal" / "crm_practice"
@@ -107,8 +108,14 @@ def export_traces(checkout: Path, out: Path, *, seed: int, limit: int) -> dict[s
     with Fabric({target.id: target.host}, config) as fabric:
         env = {**fabric.env(target.id), **target.code_env(checkout)}
         result = proc.run(argv, extra_env=env, input_text=tasks_jsonl(tasks), timeout_s=900)
+        chaos_log = list(fabric.chaos.log)
+        charges = fabric.spend.charges(account_of(target.id))
     if result.returncode != 0:
         raise RehearsalError(f"trace export failed: {result.stderr[-2000:]}")
+    costs = trace_export.task_costs(chaos_log, target.host.economics.service_costs_usd, charges)
+    files = trace_export.read_exports(out)
+    priced = trace_export.apply_costs(files, costs)
+    trace_export.write_exports(files, out)
     lines = [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
     rows = [line for line in lines if "guard" not in line]
     guard = next((line["guard"] for line in lines if "guard" in line), None)
@@ -121,6 +128,7 @@ def export_traces(checkout: Path, out: Path, *, seed: int, limit: int) -> dict[s
             "traces": len([p for p in out.iterdir() if p.is_dir()]),
             "profile": target.stress_profile, "seed": seed, "model_mode": "offline",
             "host_non_loopback_refused": guard["non_loopback_refused"],
+            "priced_traces": priced, "metered_cost_usd": round(sum(costs.values()), 6),
             "export_sha256": _tree_sha(out)}  # fmt: skip
 
 
@@ -135,10 +143,11 @@ def run(cfg: OnboardRehearsal) -> dict[str, Any]:
         library = AntibodyLibrary(OMEGA / "antibodies")
         record = pipeline.onboard(INTAKE.read_text(encoding="utf-8"), checkout, exports,
                                   library, package_dir="practice_crm",
-                                  side_effect_tools=SIDE_EFFECT_TOOLS)  # fmt: skip
+                                  side_effect_tools=SIDE_EFFECT_TOOLS,
+                                  root=cfg.root / "cases")  # fmt: skip
     refused = list(guard.refused) + list(exported["host_non_loopback_refused"])
-    cfg.log(f"[{cfg.run}] onboarded: replay {record['O3_replay']}, "
-            f"immune scan {record['O6_immune_scan']['status']}")  # fmt: skip
+    cfg.log(f"[{cfg.run}] onboarded: replay {record['O6_baseline']['replay']}, "
+            f"immune scan {record['O7_immune_scan']['status']}")  # fmt: skip
     return {
         "kind": "onboarding-rehearsal", "run": cfg.run, "phase": "rehearsal",
         "oss": "OSS-1 (rehearsal stand-in: the disclosed CRM practice host)",
@@ -181,7 +190,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.out.write_text(text, encoding="utf-8", newline="\n")
     print(text)
     clean = summary["network"]["non_loopback_connections_refused"] == 0
-    return 0 if clean and summary["onboarding"]["O7_receipt"]["pr_only"] else 1
+    return 0 if clean and summary["onboarding"]["O7_immune_scan"]["receipt"]["pr_only"] else 1
 
 
 if __name__ == "__main__":

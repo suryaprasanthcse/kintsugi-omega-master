@@ -26,7 +26,7 @@ from typing import Any
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
-from temporalio.exceptions import ApplicationError
+from temporalio.exceptions import ActivityError, ApplicationError
 from temporalio.workflow import ParentClosePolicy
 
 with workflow.unsafe.imports_passed_through():
@@ -43,6 +43,7 @@ CANARY_HOST_P0 = "canary-host-p0"  # Stage 7: the canary's H0 comes from the hos
 ANTIBODY_LIFECYCLE = "antibody-lifecycle"  # Stage 7: maturation promotes MATURED → ACTIVE
 L3_VACCINATION_CANARY = "l3-vaccination-canary"  # Stage 7: canary, revert, quarantine, refine
 PAUSE_FORWARD = "pause-forwards-to-wave"  # Stage 7: pause_antibody reaches the running wave
+CAMPAIGN_DELIVERY_GUARD = "campaign-delivery-guard"  # one failed delivery never ends a campaign
 
 
 async def act(name: str, *args: Any, config: c.ControlConfig, result_type: Any = None) -> Any:
@@ -460,6 +461,7 @@ class SabotageCampaign:
         self.requests: list[tuple[str, float]] = []
         self.sealed: dict[str, str] = {}
         self.delivered: list[str] = []
+        self.failed: dict[str, str] = {}  # spec id → why its delivery failed (guarded runs)
         self.closed = False
 
     @workflow.signal
@@ -474,6 +476,30 @@ class SabotageCampaign:
     @workflow.query
     def commitments(self) -> dict[str, str]:
         return dict(self.sealed)
+
+    @workflow.query
+    def failures(self) -> dict[str, str]:
+        return dict(self.failed)
+
+    async def _deliver(self, spec_id: str, config: c.ControlConfig) -> None:
+        """One delivery, isolated: a spec that cannot be delivered (after its retries, or
+        refused outright) is recorded on the ledger and the campaign moves on, so a public
+        Arena request can never stop the sealed schedule behind it."""
+        if not workflow.patched(CAMPAIGN_DELIVERY_GUARD):
+            await act("deliver_sabotage", spec_id, config=config)
+            self.delivered.append(spec_id)
+            return
+        try:
+            await act("deliver_sabotage", spec_id, config=config)
+        except ActivityError as error:
+            cause = error.cause if error.cause is not None else error
+            reason = f"{type(cause).__name__}: {cause}"[:300]
+            self.failed[spec_id] = reason
+            await act("ledger_append", {"type": "sabotage", "event": "delivery-failed",
+                                        "sabotage": spec_id, "reason": reason},
+                      config=config, result_type=str)  # fmt: skip
+            return
+        self.delivered.append(spec_id)
 
     @workflow.run
     async def run(self, campaign: Campaign, config: c.ControlConfig) -> list[str]:
@@ -497,8 +523,7 @@ class SabotageCampaign:
             if at > elapsed:
                 await asyncio.sleep(at - elapsed)
                 elapsed = at
-            await act("deliver_sabotage", spec_id, config=config)
-            self.delivered.append(spec_id)
+            await self._deliver(spec_id, config)
         return list(self.delivered)
 
 
