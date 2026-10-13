@@ -20,9 +20,34 @@ def test_version_prints_pinned_toolchain(capsys: pytest.CaptureFixture[str]) -> 
         assert version in out
 
 
-def test_unbuilt_commands_skip_honestly(capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["demo"]) == EXIT_SKIPPED
-    assert "No checks were run" in capsys.readouterr().out
+def test_the_demo_replays_a_sealed_sabotage_and_its_audit(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    """End to end, offline: seal → T0 → deliver → anchor → reveal → audit C1 and C6 PASS."""
+    from kintsugi.sandbox import proc
+
+    if proc.which("git") is None:
+        pytest.skip("git is not installed")
+    assert main(["demo", "--root", str(tmp_path)]) == EXIT_OK
+    out = capsys.readouterr().out
+    assert "C1  PASS" in out
+    assert "C6  PASS" in out
+    assert "audit exit code: 0" in out
+    assert "not exercised offline" in out  # what it cannot check is said, never passed
+    assert not any(tmp_path.iterdir())  # the scratch practice repo is removed
+
+
+def test_the_demo_fails_when_its_audit_fails(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from kintsugi import demo
+
+    failed = {"run": "demo-x", "duration_s": 0.1, "ledger": [], "anchor": "anchor-x",
+              "audit": {"exit_code": 1, "results": {"C1": {"status": "FAIL", "summary": "x"}}},
+              "not_exercised": {}, "disclosed": []}  # fmt: skip
+    monkeypatch.setattr(demo, "run", lambda root, keep, log: failed)
+    assert main(["demo"]) == EXIT_FAIL
+    assert "C1  FAIL" in capsys.readouterr().out
 
 
 def test_audit_before_t0_skips_what_needs_the_window(

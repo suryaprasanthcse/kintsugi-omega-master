@@ -284,9 +284,12 @@ def run(cfg: WRehearsal) -> dict[str, Any]:
     report = audit.run_audit(cfg.repo, selection=audit.Selection(checks=CHECKS))
     results = {r.check: r.as_dict() for r in report.results}
     cfg.log(f"[{cfg.run}] audit {', '.join(f'{k} {v["status"]}' for k, v in results.items())}")
+    entries = crew.ledger.entries()
+    if crew.ctx.store is not None:
+        crew.ctx.store.close()  # release the run's SQLite files (the scratch tree is deletable)
     return summarize(
         cfg,
-        crew.ledger.entries(),
+        entries,
         results,
         report.exit_code,
         tag,

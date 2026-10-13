@@ -1,0 +1,75 @@
+# kintsugi audit (spec §7.5, §12): C1–C14 over the published bundles, from public data only.
+#
+# Exit codes are the spec's: 0 every check passes, 1 a check fails, 2 checks were skipped
+# because their inputs do not exist yet. Before T0 there is no window record, ledger or bundle,
+# so C1–C10 and C12 SKIP (never PASS) and the run exits 2: this workflow fails only on 1.
+# The demo job replays a disclosed sealed sabotage end to end and must pass C1 and C6 (exit 0).
+name: audit
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * *"  # daily: anchors and the ledger move without a push to main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ENTIRE_TEST_TTY: "0"
+  GIT_TERMINAL_PROMPT: "0"
+
+jobs:
+  audit:
+    name: kintsugi audit --all --offline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # C2–C5 read the commits in W; C1 reads the ledger branch and tags
+      - name: Fetch the ledger branch, anchors and checkpoint refs
+        run: |
+          git fetch --no-tags origin '+refs/heads/ledger:refs/heads/ledger' || true
+          git fetch origin '+refs/tags/anchor-*:refs/tags/anchor-*' || true
+          git fetch origin '+refs/entire/*:refs/entire/*' || true
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install the locked environment
+        run: uv sync --locked
+      - name: C1–C14 (offline, published bundles)
+        shell: bash
+        run: |
+          set +e
+          uv run kintsugi audit --all --offline ./published-bundles --json > audit.json
+          code=$?
+          set -e
+          uv run python -c "
+          import json, sys
+          report = json.load(open('audit.json', encoding='utf-8'))
+          rows = report['checks']
+          lines = ['| Check | Status | Summary |', '|---|---|---|']
+          lines += [f\"| {r['check']} | {r['status']} | {r.get('summary', '')} |\" for r in rows]
+          print('\n'.join(lines))
+          " >> "$GITHUB_STEP_SUMMARY"
+          echo "kintsugi audit exit code: $code (0 pass, 1 fail, 2 skipped)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" -eq 1 ]; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audit-report
+          path: audit.json
+
+  demo:
+    name: kintsugi demo (sealed sabotage → audit C1, C6)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install the locked environment
+        run: uv sync --locked
+      - name: Replay a sealed sabotage and audit it
+        run: uv run kintsugi demo

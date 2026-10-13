@@ -1,7 +1,7 @@
 """`kintsugi` command-line entry point.
 
-Commands that belong to later stages exit with code 2 and say which stage builds them.
-For `audit`, code 2 is the spec's own meaning: "checks skipped" (§7.5).
+Every command is built. Exit codes: 0 ok, 1 failed; for `audit`, 2 is the spec's own meaning,
+"checks skipped" (§7.5): a check without its inputs is SKIP, never PASS.
 """
 
 from __future__ import annotations
@@ -19,12 +19,6 @@ from kintsugi.proof.attest import Ed25519Signer, fingerprint, load_public_key
 EXIT_OK = 0
 EXIT_FAIL = 1
 EXIT_SKIPPED = 2
-
-# Command → the execution-plan stage that implements it.
-_PENDING: dict[str, str] = {
-    "demo": "Stage 13 (dress rehearsal)",
-    "fleet": "Stage 3 (fleet runtime) and Stage 5 (control plane)",
-}
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -60,7 +54,10 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="id of a ruleset active on main (repeatable)")  # fmt: skip
     t0_gen.add_argument("--t0", help="RFC 3339 UTC (default: now)")
 
-    sub.add_parser("demo", help="run the recorded demo scenario")
+    demo = sub.add_parser("demo", help="replay a sealed sabotage and its audit (C1, C6) offline")
+    demo.add_argument("--root", type=Path, default=None, help="scratch dir (default: temp)")
+    demo.add_argument("--keep", action="store_true", help="keep the scratch practice repo")
+    demo.add_argument("--json", action="store_true", help="the full summary as JSON")
 
     fleet = sub.add_parser("fleet", help="the host fleet: baselines, start, stop")
     fleet_sub = fleet.add_subparsers(dest="fleet_command", required=True)
@@ -781,10 +778,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return rehearsal.main(argv_oss1)
     if args.command == "t0":
         return _t0_check(args)
+    if args.command == "demo":
+        from kintsugi import demo
 
-    stage = _PENDING[args.command]
-    print(f"kintsugi {args.command}: not built yet — arrives in {stage}. No checks were run.")
-    return EXIT_SKIPPED
+        return demo.main(root=args.root, keep=args.keep, as_json=args.json)
+    raise SystemExit(f"kintsugi: unknown command {args.command!r}")  # argparse prevents this
 
 
 if __name__ == "__main__":

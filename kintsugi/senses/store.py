@@ -32,6 +32,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
+from kintsugi.control.dbconn import enable_wal
+
 EVENT_WINDOW_S = 24 * 3600
 Source = Literal["webhook", "poller", "metric"]
 Disposition = Literal["opened", "attached", "held"]
@@ -113,8 +115,11 @@ class SenseStore:
         self.path = str(path)
         self._clock = clock
         self._local = threading.local()
+        self._opened: list[sqlite3.Connection] = []  # every thread's connection, for close()
+        self._opened_lock = threading.Lock()
         if self.path != ":memory:":
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
+            enable_wal(self.path)  # once per file, retried (kintsugi.control.dbconn)
         self._connection().executescript(SCHEMA)  # idempotent DDL; commits on its own
         self._migrate_dispositions()
 
@@ -142,10 +147,11 @@ class SenseStore:
             db = sqlite3.connect(self.path, timeout=5.0, isolation_level=None,
                                  check_same_thread=False)  # fmt: skip
             db.row_factory = sqlite3.Row
-            db.execute("PRAGMA journal_mode = WAL")
+            db.execute("PRAGMA busy_timeout = 30000")  # WAL is set once per file, in __init__
             db.execute("PRAGMA synchronous = NORMAL")
-            db.execute("PRAGMA busy_timeout = 5000")
             self._local.db = db
+            with self._opened_lock:
+                self._opened.append(db)
         return db
 
     @contextmanager
@@ -160,10 +166,13 @@ class SenseStore:
         db.execute("COMMIT")
 
     def close(self) -> None:
-        db = getattr(self._local, "db", None)
-        if db is not None:
+        """Close every connection this store opened, on any thread (call it when no thread
+        is using the store any more; a later call simply opens a new connection)."""
+        with self._opened_lock:
+            opened, self._opened = self._opened, []
+        for db in opened:
             db.close()
-            self._local.db = None
+        self._local = threading.local()
 
     # ----------------------------------------------------------------------- events
 
