@@ -1,17 +1,23 @@
 """The real crew behind the control plane's activities (Stage 5's ``Crew`` port).
 
-``OmegaCrew.handle`` dispatches each activity to its role: Sentinel (``route_hit``), Pathologist
-(``triage``, ``reproduce``), Archivist (``attribute``), governor and Coordinator
-(``plan_budget``, ``hypothesize``, ``coordinate``, ``dispute_experiment``, ``budget_exhausted``),
-Surgeons (``surgeon`` through Stage 5's ``SurgeonStep``), the Auditor (``audit_gates``), the
-shipper (``ship``) and the L4 re-verification (``rebase_and_rerun``). Ledger-shaped steps
-(``record_transition``, ``park``, ``escalate``, ``ledger_append``) append to a hash-chained
-ledger file (``kintsugi.proof.ledger`` format) until Stage 8 moves it to the ``ledger`` branch.
+``OmegaCrew.handle`` dispatches each of the control plane's 38 activities to its handler
+(``do_<activity>``; ``tests/crew/test_crew_handlers.py`` checks none is missing):
 
-Stage 7 owns antibodies, motifs, vaccination and quarantine: those steps answer honestly that
-nothing exists yet (no antibody match, an empty motif scan, a placeholder antibody reference
-recorded as pending). The canary is real: each batch runs the host's tasks on the merged code
-under the background chaos profile.
+- **Diagnosis**: Sentinel (``route_hit``), Pathologist (``triage``, ``reproduce``), Archivist
+  (``attribute``, then the culprit span is marked on neatlogs when write-back is configured).
+- **Repair**: the governor and Coordinator (``plan_budget``, ``hypothesize``, ``coordinate``,
+  ``dispute_experiment``, ``budget_exhausted``; Stage 9's cortex and L5 treatments), Surgeons
+  (``surgeon`` through ``SurgeonStep``), the Auditor (``audit_gates``), the shipper (``ship``),
+  the L4 re-verification (``rebase_and_rerun``), the canary (``canary_plan``,
+  ``canary_sample``), reverts and ``fixes_resolve`` (the repair's verdict on the traces).
+- **Immunity** (Stage 7, with ``Immunity``): synthesis, motif scans, maturation, promotion,
+  vaccination, backfill, quarantine, refinement and the eval-augment path.
+- **Proof** (Stage 8): the ledger-shaped steps (``record_transition``, ``park``, ``escalate``,
+  ``ledger_append``) append to the hash-chained ledger: a ``FileLedger`` in rehearsals, the
+  ``BranchLedger`` on ``refs/heads/ledger`` in W; ``anchor_ledger`` signs hourly anchors;
+  ``seal_sabotage`` and ``deliver_sabotage`` run the ``SabotageLane`` (patches through the
+  upstream lane, environment classes through the chaos overlay).
+- **Onboarding** (Stage 10): ``onboard_step`` runs O1–O7 on the ``OnboardingDesk``.
 
 Workers load it through ``kintsugi.crew.runtime`` (configured per deployment or rehearsal).
 """
@@ -54,6 +60,7 @@ from kintsugi.proof.ledger import Ledger, genesis_hash
 from kintsugi.proof.ledger_branch import BranchLedger
 from kintsugi.sandbox import worktree
 from kintsugi.senses.drift import reverify_plan
+from kintsugi.senses.feedback import TraceFeedback
 from kintsugi.senses.fixes_mcp import Fixes, FixesUnavailable
 
 CANARY_TASKS = 10
@@ -158,10 +165,12 @@ class OmegaCrew:
         cortex: Cortex | None = None,  # Stage 9: business plan + live actuals behind budgets
         treater: Treater | None = None,  # Stage 9: applies an L5 treatment the governor chose
         onboarding: OnboardingDesk | None = None,  # Stage 10: O1–O7 for registered hosts
+        feedback: TraceFeedback | None = None,  # §4.2 write-back: culprit span, verdict
     ) -> None:
         self.ctx = ctx
         self.treater = treater
         self.onboarding = onboarding
+        self.feedback = feedback
         self.runner = runner
         self.shipper = shipper
         self.fixes = fixes
@@ -230,7 +239,14 @@ class OmegaCrew:
         return Pathologist(self.ctx).reproduce(sig)
 
     def do_attribute(self, step: StepContext, sig: c.Signature, repro: c.Repro) -> c.Cause:
-        return Archivist(self.ctx).attribute(sig, repro)
+        cause = Archivist(self.ctx).attribute(sig, repro)
+        if self.feedback is not None:  # §4.2: mark the culprit span on each failing trace
+            diagnosis = cause.report.strip().splitlines()[0] if cause.report.strip() else (
+                "suspects: " + ", ".join(cause.suspects[:3]))  # fmt: skip
+            results = self.feedback.culprit(sig.incident_id, sig.trace_ids, diagnosis)
+            self.ctx.case(sig.incident_id).put("trace_feedback", "culprit", results,
+                                               by="pathologist")  # fmt: skip
+        return cause
 
     def do_fixes_prior(self, step: StepContext, sig: c.Signature) -> str | None:
         if self.fixes is None:
@@ -768,7 +784,14 @@ class OmegaCrew:
         return path
 
     def do_fixes_resolve(self, step: StepContext, sig: c.Signature, shipment: c.Shipment) -> None:
-        """§4.2: mark the incident's claimed neatlogs Fix suggestion resolved, with the PR."""
+        """§4.2: record the repair's verdict on each failing trace, and mark the incident's
+        claimed neatlogs Fix suggestion resolved, with the PR."""
+        if self.feedback is not None:
+            results = self.feedback.verdict(sig.incident_id, sig.trace_ids,
+                                            pr_url=shipment.pr_url,
+                                            error_class=f"kintsugi:{sig.phi}"[:100])  # fmt: skip
+            self.ctx.case(sig.incident_id).put("trace_feedback", "verdict", results,
+                                               by="pathologist")  # fmt: skip
         if self.fixes is None or shipment.pr_url is None:
             return None
         try:

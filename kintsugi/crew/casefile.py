@@ -46,6 +46,7 @@ KINDS: Mapping[str, str] = {
     "incident_open": "hits",
     "observations": "traces",
     "cassette": "traces",
+    "trace_feedback": "traces",  # §4.2 write-back to the failing traces: culprit span, verdict
     "signature": "summary",
     "symptom": "summary",
     "repro": "summary",

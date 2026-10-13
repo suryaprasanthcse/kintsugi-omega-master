@@ -553,6 +553,17 @@ class NeatlogsApi:
         return self.call("traces.feedback", path={"traceId": trace_id}, body=dict(body),
                          idempotency_key=idempotency_key)  # fmt: skip
 
+    def span_feedback(
+        self, trace_id: str, span_id: str, vote: str, *, note: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:  # fmt: skip
+        """§4.2: mark a span (the culprit) ``up`` or ``down``, with a short note."""
+        body: dict[str, Any] = {"vote": vote}
+        if note is not None:
+            body["note"] = note
+        return self.call("traces.span_feedback", path={"traceId": trace_id, "spanId": span_id},
+                         body=body, idempotency_key=idempotency_key)  # fmt: skip
+
     # ----------------------------------------------------------------------- detections
 
     def detection_groups(self) -> list[dict[str, Any]]:

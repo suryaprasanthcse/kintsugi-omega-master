@@ -61,6 +61,7 @@ from kintsugi.proof import attest
 from kintsugi.proof.audit import WINDOW_FILE, Window
 from kintsugi.proof.ledger_branch import BranchLedger
 from kintsugi.sandbox.chaos_overlay import ChaosOverlay
+from kintsugi.senses.feedback import TraceFeedback
 
 ENV = "KINTSUGI_RUNTIME"
 ANCHOR_WORKFLOW_ID = "audit-anchor"
@@ -224,10 +225,12 @@ def build(cfg: RuntimeConfig) -> OmegaCrew:
     cortex = Cortex.from_repo(repo) if (repo / PLAN_FILE).is_file() else None  # Stage 9
     treater = Treater(notary, Reverter(notary, RevertConfig(remote=cfg.remote), github=gh))
     onboarding = OnboardingDesk(state / "onboarding", AntibodyLibrary(repo / "antibodies"))
+    # §4.2 write-back to neatlogs traces (needs NEATLOGS_OAUTH_TOKEN; skipped without it, A-29)
+    feedback = TraceFeedback(api_from_env(os.environ)) if cfg.neatlogs else None
     return OmegaCrew(ctx, runner=lambda: surgeon, shipper=shipper, ledger=ledger,
                      immunity=immunity, anchoring=anchoring, cortex=cortex, treater=treater,
                      sabotage=sabotage_lane(cfg, notary, gh, tuple(targets)),
-                     onboarding=onboarding)  # fmt: skip
+                     onboarding=onboarding, feedback=feedback)  # fmt: skip
 
 
 def sabotage_lane(
