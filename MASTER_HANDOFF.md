@@ -7,7 +7,7 @@
 | This repository | https://github.com/suryaprasanthcse/kintsugi-omega-master · local `C:\myspace\hacckathons\kintsugi-omega-master` |
 | Frozen submission | https://github.com/suryaprasanthcse/kintsugi-omega at `13a744b` (#neatHack). **Never** fetch into, commit to, push to, or add a remote for it. |
 | Base | `13a744b` "chore: license the repository under MIT", omega-ci run 38259678672 green on the frozen repo |
-| Status | Stages 1–8 built and verified. The autonomy window W did not run (NO-GO, 2026-10-12). **Updated 2026-10-13 (overnight run):** Stage 13a, Stage 9 and Stage 12 built and verified offline; Stage 10 and 11 offline modules built (A-69 … A-72, `docs/VERIFICATION.md`). **Updated 2026-10-13 (offline items):** placeholder runway, the OSS-1 onboarding rehearsal, the Arena board and service (A-73 … A-75); 970 passed / 30 skipped in one run on `f6e1cb8`. Remaining: the Architect's items in §4 "Waiting on the Architect", then 13b. |
+| Status | Stages 1–8 built and verified. The autonomy window W did not run (NO-GO, 2026-10-12). **Updated 2026-10-13 (overnight run):** Stage 13a, Stage 9 and Stage 12 built and verified offline; Stage 10 and 11 offline modules built (A-69 … A-72, `docs/VERIFICATION.md`). **Updated 2026-10-13 (offline items):** placeholder runway, the OSS-1 onboarding rehearsal, the Arena board and service (A-73 … A-75); 970 passed / 30 skipped in one run on `f6e1cb8`. **Updated 2026-10-13 (audit-gap closure):** the 13 gaps of the read-only audit closed in code (A-76 … A-80); 1018 passed / 30 skipped in one run on `57c6938`; `kintsugi demo` C1, C6 PASS. Remaining: the Architect's items in §4 "Waiting on the Architect", then 13b. |
 
 ## 1. Current state (inherited from `13a744b`)
 
@@ -15,7 +15,7 @@
 - **CI:** `.github/workflows` run lint · typecheck · test and one G7 job per host (ledger, scout, triage). The only secret they read is `HOLDOUT_AGE_IDENTITY`.
 - **Stages 1–8** (`docs/EXECUTION_PLAN.md`, results in `docs/VERIFICATION.md`): proof cores, the Entire and entire-graph layer, the fleet (Ledger, Scout, Triage), senses (neatlogs receptors, ingress, poller), the Temporal control plane, crew and gates G0–G7, antibodies with the canary and L3 quarantine, and the proof plane (`kintsugi audit` C1–C14 with a 33-test mutation suite, `BranchLedger` with signed `anchor-*` tags, the Saboteur, `kintsugi t0 check`, `kintsugi t0 genesis`).
 - **Rehearsal evidence:** `evidence/rehearsals/l3-20261012-074523.json` and `antibodies/AB-1` (AB-1@1.1 ACTIVE). Primary repair $0.665, vaccinations $0.089 and $0.104, backfill $12.00, disclosed L3 drill (frozen repo PRs #7–#10). Rehearsal branches `rehearsal/*` are carried over as history.
-- **Amendments:** A-1 … A-68 in `docs/EXECUTION_PLAN.md` at the base; this edition adds A-69 … A-75. The next one is **A-76**.
+- **Amendments:** A-1 … A-68 in `docs/EXECUTION_PLAN.md` at the base; this edition adds A-69 … A-80. The next one is **A-81**.
 - **Not carried over:** `.env`, `.state/` and every key file stay outside git. No `ledger` branch and no `anchor-*` tags exist (no T0 ever happened). The frozen repo's GitHub rulesets, issues and PRs do not exist here.
 
 ## 2. Isolation rules for this edition
@@ -121,6 +121,27 @@ Recommended order: **13a** (runtime wiring) → **9** → **12** → **10** → 
   A-73 placeholders and set `company.placeholder` to false); the OSS-1 repository and approval
   of every foreign post; opening the Arena (`kintsugi arena serve --runtime …` once W runs a
   `SabotageCampaign`); then the 13b dress rehearsal.
+
+### State after the 2026-10-13 audit-gap closure
+
+- **Built (A-76 … A-80):** `kintsugi/sandbox/chaos_overlay.py` and the campaign's delivery guard;
+  `kintsugi/onboard/{desk,workflow}.py`, `kintsugi onboard run`, the tool-aware scanner and
+  transient-retry handling; Arena §7.7 parity and collision-proof spec ids;
+  `kintsugi/econ/scenarios.py` (§10); `kintsugi/senses/feedback.py`; `kintsugi demo`;
+  `.github/workflows/audit.yml`; `kintsugi/control/dbconn.py`.
+- **Evidence:** `evidence/rehearsals/oss1-20261013-073328.json` (OSS-1 through the `Onboarding`
+  workflow); `business/cfo_export/{scenarios,scenario_months,coverage_scenarios}.csv`.
+- **Commits:** `640e046` (Block 1), `3e0d61e` (2), `289ac60` (3), `1c06c0c` (4), `8f8de50` (the
+  SQLite race that made omega-ci red on `640e046`), `3132eff` and `57c6938` (5), then the docs
+  commit recording this section, which also makes a flaky Temporal query test tolerant
+  (omega-ci was red on `57c6938` only for that test). The new `audit` workflow is green.
+- **Tests:** **1018 passed, 30 skipped** in one full run on `57c6938` (15 min 54 s).
+- **Audit:** `kintsugi audit --all --offline ./published-bundles` exits 2 by design until a real
+  window exists (C11, C14 PASS; the rest SKIP); `kintsugi demo` exits 0 (C1, C6 PASS).
+- **Still open (not doable from code alone):** everything under "Waiting on the Architect" above.
+  **Not built yet:** the Arena's model-assisted free-text compiler, per-incident proof bundles
+  (P1, §5), the Textual operator TUI, onboarding's dependency install in gVisor and cassettes
+  from trace exports (A-77).
 
 ## 5. Open issues carried over
 

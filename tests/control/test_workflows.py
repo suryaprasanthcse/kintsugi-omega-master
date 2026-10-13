@@ -295,7 +295,10 @@ def test_the_supervisor_continues_as_new_and_keeps_its_state() -> None:
                 await sup.signal(FleetSupervisor.hit, hit(n))
 
             async def seven() -> bool:
-                return (await sup.query(FleetSupervisor.status))["events"] == 7
+                try:  # the run continues as new every 3 events: a query may land mid-switch
+                    return (await sup.query(FleetSupervisor.status))["events"] == 7
+                except RPCError:  # "query deadline exceeded" while the next run starts
+                    return False
 
             await wait_for(seven)
             await sup.signal(FleetSupervisor.hit, hit(2))  # seen before the continue_as_new
@@ -308,8 +311,18 @@ def test_the_supervisor_continues_as_new_and_keeps_its_state() -> None:
                     return False
 
             await wait_for(eight)
-            status = await latest.query(FleetSupervisor.status)
-            budget = await latest.query(FleetSupervisor.budget, "triage")
+            answers: dict[str, Any] = {}
+
+            async def settled() -> bool:  # the same tolerance for the final reads
+                try:
+                    answers["status"] = await latest.query(FleetSupervisor.status)
+                    answers["budget"] = await latest.query(FleetSupervisor.budget, "triage")
+                except RPCError:
+                    return False
+                return True
+
+            await wait_for(settled)
+            status, budget = answers["status"], answers["budget"]
             first_run = client.get_workflow_handle("sup-can", run_id=sup.result_run_id)
             history = await first_run.fetch_history()
             await latest.terminate("test over")

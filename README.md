@@ -7,7 +7,8 @@
 [suryaprasanthcse/kintsugi-omega@13a744b](https://github.com/suryaprasanthcse/kintsugi-omega/tree/13a744b)
 and is never modified. This edition has since built the W runtime wiring (Stage 13a), the
 economic cortex (Stage 9), self-repair (Stage 12), the offline OSS-1 onboarding rehearsal
-(Stage 10) and the Arena board and service (Stage 11), all verified offline; see
+(Stage 10), the Arena board and service (Stage 11) and the audit-gap closure (A-76 … A-80), all
+verified offline; see
 [Master Edition progress](#master-edition-progress-2026-10-13). The plan is in
 [MASTER_HANDOFF.md](MASTER_HANDOFF.md).
 
@@ -80,6 +81,7 @@ touched, no `.env` in this clone. Evidence and details: [docs/VERIFICATION.md](d
 | 12 Self-repair | the `self_repair` scope enforced at commit for Omega's own repairs (C14), `hosts/omega`: a replay suite of **4 recorded incidents** (of the plan's 20) with a hit@3 grader | INC-SELF-01 rehearsal: root-cause **hit@3 0.25 → 0.75**, C14 PASS, an edit to the audit refused at commit (`evidence/rehearsals/self-20261012-202518.json`) |
 | 10 Onboarding (offline) | `kintsugi/onboard` O1–O7: Clinic intake form with required consent, health card, replay mode from exported traces, seed evals, baseline, immune scan, PR-only receipts; `kintsugi onboard rehearse` | OSS-1 rehearsal on the disclosed CRM practice host (OSS-1 itself is the Architect's choice): 24 locally captured traces replayed, the immune scan matches **AB-1@1.1**, receipt **PR-only, no merge**, **0** non-loopback connections, **0** foreign posts (`evidence/rehearsals/oss1-20261013-053800.json`, A-74) |
 | 11 Arena (offline) | `kintsugi/arena_api.py` (strict schema, environment classes only, sealed on arrival, 1 request / client / 10 min, daily cap), `kintsugi/arena_service.py` (`Saboteur.seal` + the `SabotageCampaign.request` signal), the static board `arena/` (fleet, incidents, immunity matrix, learning curve, ledger head, "Sabotage it"; no build step, no external requests), `kintsugi arena serve` | a 33-payload injection fuzz corpus is refused; the campaign signal reaches a running `SabotageCampaign` on a Temporal test server; closed before W (503, no limit spent) (A-75) |
+| Gap closure (A-76 … A-80) | Arena faults delivered as chaos-proxy overlays with a delivery guard in `SabotageCampaign`; `onboard_step` and the `Onboarding` workflow (O1–O7 as §5.9.4 names them; `kintsugi onboard run`); a tool-aware scanner; transient retries never seeded; §7.7 board parity (open incidents, last canary, vulnerable cells, log-log curve, last anchor) and collision-proof spec ids; the §10 runway scenarios; neatlogs trace write-back; `kintsugi demo`; `.github/workflows/audit.yml` | all 38 activities have crew handlers; an undeliverable request no longer stops the sealed schedule; the scenario engine reproduces §10's table from its own drivers; `kintsugi demo` replays a sealed sabotage to **C1 and C6 PASS** (exit 0) locally and in CI; **1018 tests passed, 30 skipped** in one run on `57c6938` |
 
 ## The proof plane: don't trust it, audit it
 
@@ -100,6 +102,7 @@ by its anchor, a forged signature, a missing nonce, a planted honeytoken and mor
 ```bash
 uv sync --locked
 uv run kintsugi audit --all --offline ./published-bundles   # today: C11, C14 PASS; the rest SKIP (no window ran); exit 2
+uv run kintsugi demo                                        # a sealed sabotage replayed locally: C1, C6 PASS; exit 0
 uv run pytest tests/proof/test_audit.py -q                  # 33 tamper tests
 uv run kintsugi t0 check                                    # what a real autonomy window still needs
 make check                                                  # ruff, pyright, full test suite
@@ -111,7 +114,7 @@ make check                                                  # ruff, pyright, ful
 |---|---|
 | Stages 1–8 of the [execution plan](docs/EXECUTION_PLAN.md) (proof cores, Entire layer, fleet, senses, control plane, crew and gates, antibodies, proof plane) | **Built and verified**: 842 tests passed, 30 contract tests skipped (they need local tooling); omega-ci green |
 | The autonomous window W | **Not run** (Architect's go/no-go, Oct 12): the runtime wiring for W was not ready in time. The audit therefore SKIPs window checks; they are exercised by the mutation suite instead |
-| Stages 9–12 (economic cortex, onboarding/Clinic, Arena, self-repair) | **Descoped** in the #neatHack submission; built offline in this Master Edition (above): **970 tests passed, 30 skipped** in one full run on `f6e1cb8`. Not yet done: cfo.ai's Ari MCP and live C10 (need this edition's own credentials), the real cash and fixed costs (placeholders today, A-73), OSS-1 onboarding on a real repository (the Architect picks it; rehearsed on a practice host, A-74), the Arena's model compiler and chaos-proxy deliveries, 16 more replay incidents, S-17/18/19 (composed and sealed by the Architect outside any Entire-tracked session, A-69) |
+| Stages 9–12 (economic cortex, onboarding/Clinic, Arena, self-repair) | **Descoped** in the #neatHack submission; built offline in this Master Edition (above): **1018 tests passed, 30 skipped** in one full run on `57c6938`. Not done, and not doable from code alone: W, T0 and the 13b dress rehearsal; S-17/18/19 (composed and sealed by the Architect outside any Entire-tracked session, A-69); everything that needs this edition's credentials (cfo.ai's Ari MCP, live C7–C10 and C12, neatlogs write-back, which needs an OAuth token, live model baselines); the real cash and fixed costs (placeholders today, A-73); OSS-1 on a real repository (A-74); 16 more replay incidents (they come from real runs). Not built yet: the Arena's model-assisted free-text compiler, per-incident proof bundles (§7.4, P1), the Textual operator TUI (§11), dependency install in the gVisor sandbox during onboarding O2, cassettes rebuilt from trace exports (A-77) |
 | Rehearsal hosts | disposable practice copies (`ledger-practice`, `crm-practice`), shipped through `rehearsal/*` branches; the real Ledger's sabotage mechanism is never written in clear (A-57) |
 | L3 | a **disclosed drill**: the wrong fix was injected on purpose; everything after the merge is Omega's own response (A-66) |
 | Sealed sabotage | demonstrated on a disclosed practice spec (P-1, audit C6 PASS); the real S-17/18/19 were never sealed because W did not run |
@@ -119,7 +122,7 @@ make check                                                  # ruff, pyright, ful
 | Open issues | neatlogs alert rules silent (A-38); 3–4% trace loss (A-39); the Haiku realism rubric is not wired (deterministic fallback, A-68) |
 
 Every deviation from the blueprint is an amendment in
-[docs/EXECUTION_PLAN.md](docs/EXECUTION_PLAN.md) (A-1 … A-75), and every run, failures included,
+[docs/EXECUTION_PLAN.md](docs/EXECUTION_PLAN.md) (A-1 … A-80), and every run, failures included,
 is in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 ## Architect & AI Tooling Disclosure

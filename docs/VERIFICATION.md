@@ -15,6 +15,56 @@ evidence that reproduces it. Numbers are copied from committed artifacts or from
 | The autonomous window W was **not run**; Stages 9–12 are **descoped** | Architect's go/no-go, 2026-10-12; README "Disclosure" |
 | Master Edition (after the submission): Stages 13a, 9 and 12 and offline Stage 10/11 modules built and verified offline | "Master Edition overnight run" below |
 | Master Edition offline items: placeholder runway, OSS-1 onboarding rehearsal, Arena board and service; full suite **970 passed, 30 skipped** in one run | "Master Edition offline items" below |
+| Audit-gap closure (13 gaps): **1018 passed, 30 skipped** in one run on `57c6938`; `kintsugi demo` C1, C6 PASS | "Audit-gap closure" below |
+
+## Audit-gap closure (2026-10-13): the 13 gaps of the read-only audit
+
+Recorded 2026-10-13 12:40–15:30 IST on Windows 11 (Entire 0.11.4, entire-graph v0.4.0) in five
+blocks the Architect ordered, plus one CI fix. Amendments A-76 … A-80. Offline; no model session,
+no foreign repository, no neatlogs or cfo.ai call. Every commit carries one verified
+`Entire-Checkpoint` whose `files_touched` covers it.
+
+| Gap | Result | Evidence |
+|---|---|---|
+| 1 An Arena request could fail `SabotageCampaign` | ✅ env faults delivered as chaos-proxy overlays (all five classes; background draws unchanged; the proxy logs the sabotage id); `DeliveryRefused` is non-retryable; on a time-skipping Temporal server a refused and an always-failing delivery are recorded and S-17/S-18 are still delivered | `tests/sandbox/test_chaos_overlay.py`, `tests/control/test_workflows.py::test_a_failed_delivery_never_stops_the_sealed_schedule`, `tests/crew/test_saboteur.py` (A-76) |
+| 2 `onboard_step` had no handler (37 of 38) | ✅ 38 of 38; the desk runs O1–O7 | `tests/crew/test_crew_handlers.py` (A-77) |
+| 3 Onboarding vs §5.9.4 | ✅ steps renamed and filled as §5.9.4 (sandbox copy, instrumentation patch on the copy, entire-graph index, eval split with a holdout manifest, baseline cost and p95); `kintsugi onboard run` and the OSS-1 rehearsal go through the `Onboarding` workflow; ⚠ still different: no dependency install offline, deterministic O3, no cassettes from exports (A-77) | `tests/onboard/test_onboarding_workflow.py`, `evidence/rehearsals/oss1-20261013-073328.json` |
+| 4 The scanner missed span-declared tools | ✅ CRM practice: `enrich`, `create_contact`, `list_contacts`; `create_contact` side-effecting; HTTP calls through `external.call(..., "POST", ...)` found | same |
+| 5 A passing trace became a failure seed | ✅ 21 seeds and 1 transient retry (CT-023) on the OSS-1 traces; the baseline counts the retry as passed | same |
+| 6 Arena panels vs §7.7 | ✅ open incidents and last canary per host, vulnerable / n/a cells, log-log curve with the empirical slope, last anchor; checked in a browser over a scratch W ledger at 1280 px and 375 px | `tests/test_arena_service.py` (A-78) |
+| 7 Spec ids after a database reset | ✅ a reset never reuses a sealed id; 16 concurrent allocations unique | same |
+| 8 §10 scenarios | ✅ reproduces §10 from its drivers: Base 31/73.0%, 116/80.2%, breakeven 10, lowest $80.9k; Growth 54/76.2%, 405/83.8%, 7, $101.6k; Network 31/79.0%, 116/85.1%, 9, $84.7k; exported from the plan's placeholder cash (labelled) | `tests/econ/test_scenarios.py`, `business/cfo_export/scenarios.csv` (A-79) |
+| 9 `kintsugi demo` was a stub | ✅ sealed practice spec → T0 → delivery → anchor → reveal → **C1 PASS (3 entries, 1 anchor), C6 PASS (1/1, 0 honeytoken hits), exit 0**, ~8 s; also in CI | `tests/test_cli.py`, the `audit` workflow's demo job (A-80) |
+| 10 `traces.feedback` had no caller | ✅ culprit span after attribution, verdict after the canary; idempotent keys; recorded as skipped without an OAuth token | `tests/senses/test_feedback.py` |
+| 11 No `audit.yml` | ✅ C1–C14 offline on every push, daily and on demand; fails only on exit 1; green on its first run | `.github/workflows/audit.yml`, `tests/test_audit_workflow.py` |
+| 12 Stale docs | ✅ the crew factory's docstring; the CLI's stub table removed | — |
+| 13 Missing tests | ✅ `arena_state` on a real ledger branch written by t0 genesis; trace exports carry metered cost (24/24 OSS-1 traces, $0.0752) and model tokens | `tests/test_arena_service.py`, `tests/onboard/test_oss1_rehearsal.py` |
+| `kintsugi audit --all --offline ./published-bundles` | exit **2**, by design: C11 PASS (1 antibody, 1 quarantine), C14 PASS (0/0), C13 SKIP (3/3 manifests match, no T0 record), the rest SKIP (no window record). Exit 0 needs a real window: a check without its inputs is SKIP, never PASS (A-67) | run 2026-10-13 |
+| Full suite, one run | ✅ **1018 passed, 30 skipped** in 15 min 54 s on `57c6938` | `uv run pytest -q` |
+
+### Defects found while building, all fixed
+
+- omega-ci red on `640e046`: three parallel Surgeons opened the attempt log at once and one died
+  with "database is locked" (every connection switched the file to WAL before setting a busy
+  timeout, and none was closed); latent since Stage 5. Fixed in `8f8de50` for the attempt log,
+  the step ledger and the incident store, with a 12-thread regression test.
+- omega-ci red on `57c6938` (1017 passed, 1 failed; the same HEAD passed 1018/1018 locally):
+  `test_the_supervisor_continues_as_new_and_keeps_its_state` queried the supervisor while it
+  was continuing as new and got "query deadline exceeded"; the test's later wait already
+  tolerated that, its first wait and final reads did not. Test-only fix in the docs commit,
+  5/5 passes locally.
+- `SenseStore.close()` closed only the calling thread's connection, so a finished rehearsal
+  could not delete its files on Windows; it now closes every connection it opened.
+- The first OSS-1 evidence through the desk recorded a local scratch path; it is now relative.
+
+### Known limits carried forward
+
+- Credentials or a real window: W, T0, 13b; S-17/18/19; C2–C10, C12 live; Ari MCP; write-back
+  (OAuth); live baselines; the real cash and fixed costs; OSS-1 on a real repository; 16 more
+  replay incidents.
+- Not built: the Arena's model-assisted free-text compiler (§7.7), per-incident proof bundles
+  (§7.4, P1), the Textual operator TUI (§11), onboarding's dependency install in gVisor and
+  cassettes from exports (A-77).
 
 ## Master Edition offline items (2026-10-13): runway, OSS-1 rehearsal, Arena board
 
