@@ -90,8 +90,13 @@ Recommended order: **13a** (runtime wiring) → **9** → **12** → **10** → 
   `self_repair` enforcement, `hosts/omega`, `kintsugi/crew/self_repair_rehearsal.py` (12);
   `kintsugi/onboard/`, the Clinic issue form, `kintsugi/arena_api.py` (10, 11 offline).
 - **Evidence:** `evidence/rehearsals/{w-20261012-193427,l5-20261012-200248,self-20261012-202518}.json`.
-- **Tests:** 901 passed, 30 skipped on `37e0be7`, plus 43 Wave D tests; omega-ci green from
-  `37e0be7` on (red on `01f9f5a` and `37304be`, fixed there).
+- **Commits:** 15, `e90b437..265681e` (the run ended at `265681e`): Wave A 13a (`e90b437`,
+  `f9a82c8`, `272b1a9`, `e892fdd`), Wave B Stage 9 (`5115a29`, `f247e21`, `d53d75f`, `0fd4ba1`),
+  Wave C Stage 12 (`ad35610`, `01f9f5a`, `37304be`), the t0 check fix (`37e0be7`), Wave D
+  (`65c8135`), docs (`265681e`).
+- **Tests:** 901 passed, 30 skipped on `37e0be7`, plus the 43 Wave D tests passed on their own
+  (944 expected in one full run, not yet run together); omega-ci green from `37e0be7` on (red on
+  `01f9f5a` and `37304be`, fixed there).
 - **Waiting on the Architect:** S-17/18/19 (compose and seal outside any Entire-tracked session;
   A-69); the Temporal CLI in WSL; this edition's neatlogs project and `.env` (C10, receptors,
   the ingress); cfo.ai/Ari access; the cash and fixed costs in `business/plan.json`; the OSS-1
