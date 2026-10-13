@@ -1,0 +1,28 @@
+<pasted_content id="45d5">
+Read `CLAUDE.md`, `MASTER_HANDOFF.md` (§4 "State after the 2026-10-13 overnight run"), `docs/EXECUTION_PLAN.md`, and `docs/VERIFICATION.md`.
+
+We are starting from HEAD `9a2dc64` on `suryaprasanthcse/kintsugi-omega-master` (next amendment is `A-73`).
+Strict invariants remain in force:
+- Work ONLY in `C:\myspace\hacckathons\kintsugi-omega-master` (`origin` -> `suryaprasanthcse/kintsugi-omega-master`). Never touch the frozen `kintsugi-omega` repo.
+- Keep Surya Prasanth R (`@suryaprasanthcse`) as sole contributor (`ENTIRE_TEST_TTY=0`, no `Co-authored-by:` trailers, single `Entire-Checkpoint` trailer, verified `files_touched` on every commit).
+
+Execute all 8 remaining offline code items from `MASTER_HANDOFF.md` sequentially without stopping for confirmation:
+
+1. Runway & `cfo-export` (Items 2 & 3):
+   - In `business/plan.json`, populate clearly labelled placeholder seed-stage figures for `company.cash_usd` (e.g., `250000.0`) and `fixed_costs_usd_month` (e.g., `18000.0`) so `runway.csv` computes a concrete runway with its status column clearly labelled as a disclosed placeholder (`A-73`).
+   - Rerun `uv run kintsugi econ cfo-export`, write/update the regenerated `business/cfo_export/` files with the Write tool so `Entire` tracks them, verify `test_cfo_sync.py` passes, and commit + push.
+
+2. Stage 10 Local `OSS-1` Onboarding Rehearsal (Items 4 & 5):
+   - Create a filled-in intake form fixture with all 5 consent boxes checked (PR-only / foreign mode disclosed).
+   - Run `kintsugi.onboard.pipeline.onboard` against a disclosed local practice checkout (`tests/fixtures/rehearsal/crm_practice` + exported traces folder) with zero network or foreign posts, record the evidence JSON under `evidence/rehearsals/`, write/run tests, and commit + push.
+
+3. Stage 11 Arena Board UI & Service Wiring (Items 6, 7 & 8):
+   - Use a zero-dependency static HTML/CSS/JS board in `arena/` (no `npm install` or external CDN calls required) mounted cleanly so it renders the fleet board, incident stream, immunity matrix, learning curve, ledger head, and "Sabotage it" form on top of `GET /api/state` and `POST /api/sabotage` in `kintsugi/arena_api.py`.
+   - Build the real `ArenaService` app factory (`Saboteur.seal` + Temporal `SabotageCampaign.request` signal) and wire the `kintsugi arena serve` CLI command.
+   - Write comprehensive unit/integration tests for the Arena UI routes, service factory, and CLI command, verify all pass, and commit + push.
+
+4. Unified Full-Suite Verification & Final Docs:
+   - Run the complete unified `pytest` suite in a single run so all 944+ tests (including Wave D and the new tests) are measured together in one pass.
+   - Update `README.md` (preserving the Architect, Gideon/Google Gemini, and Claude Code disclosure), `docs/EXECUTION_PLAN.md` (`A-73+`), `docs/VERIFICATION.md`, and `MASTER_HANDOFF.md` with the final measured test count and HEAD.
+   - Commit, push `main` and `refs/entire/checkpoints/v1` to `origin`, and confirm `omega-ci` is green.
+</pasted_content id="45d5">
