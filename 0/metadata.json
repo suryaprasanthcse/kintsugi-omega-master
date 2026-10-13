@@ -1,0 +1,104 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4TH8D944JRZD55WBBH2AHWQ",
+  "session_id": "31f65c63-a11e-49e2-aa32-0e76d95c8a8d",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-13T11:44:40.7631375Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "docs/EXECUTION_PLAN.md",
+    "kintsugi/cli.py",
+    "kintsugi/control/activities.py",
+    "kintsugi/control/contracts.py",
+    "kintsugi/control/service.py",
+    "kintsugi/control/workflows.py",
+    "kintsugi/crew/casefile.py",
+    "kintsugi/crew/factory.py",
+    "kintsugi/crew/runtime.py",
+    "kintsugi/crew/saboteur.py",
+    "kintsugi/proof/audit.py",
+    "kintsugi/senses/drift.py",
+    "scripts/w-runtime.sh",
+    "tests/crew/test_crew_handlers.py",
+    "tests/crew/test_crew_telemetry.py",
+    "tests/helpers/control.py"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-opus-5-5",
+  "turn_id": "113ace1b2fd4",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 234,
+    "cache_creation_tokens": 332778,
+    "cache_read_tokens": 30199574,
+    "output_tokens": 104600,
+    "api_call_count": 116
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-13T11:44:40.6753113Z",
+    "agent_lines": 0,
+    "agent_removed": 1,
+    "human_added": 17,
+    "human_modified": 37,
+    "human_removed": 0,
+    "total_committed": 41,
+    "total_lines_changed": 57,
+    "agent_percentage": 1.7543859649122806,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1547,
+      "user_lines_removed": 37,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "kintsugi/cli.py": 16,
+        "kintsugi/control/activities.py": 7,
+        "kintsugi/control/contracts.py": 10,
+        "kintsugi/control/service.py": 54,
+        "kintsugi/control/workflows.py": 48,
+        "kintsugi/crew/bundler.py": 258,
+        "kintsugi/crew/casefile.py": 10,
+        "kintsugi/crew/factory.py": 58,
+        "kintsugi/crew/healer.py": 115,
+        "kintsugi/crew/runtime.py": 20,
+        "kintsugi/crew/saboteur.py": 3,
+        "kintsugi/crew/telemetry.py": 224,
+        "kintsugi/proof/audit.py": 5,
+        "kintsugi/senses/drift.py": 34,
+        "scripts/w-runtime.sh": 7,
+        "tests/control/test_main_watch.py": 150,
+        "tests/crew/test_crew_handlers.py": 1,
+        "tests/crew/test_crew_telemetry.py": 170,
+        "tests/crew/test_healer_port.py": 127,
+        "tests/crew/test_proof_bundle_emission.py": 227,
+        "tests/helpers/control.py": 3
+      },
+      "user_removed_per_file": {
+        "kintsugi/control/service.py": 3,
+        "kintsugi/control/workflows.py": 5,
+        "kintsugi/crew/factory.py": 4,
+        "kintsugi/crew/runtime.py": 3,
+        "kintsugi/crew/saboteur.py": 4,
+        "kintsugi/proof/audit.py": 1,
+        "kintsugi/senses/drift.py": 14,
+        "scripts/w-runtime.sh": 2,
+        "tests/crew/test_crew_handlers.py": 1
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1584,
+      "agent_lines_removed": 38
+    }
+  ]
+}

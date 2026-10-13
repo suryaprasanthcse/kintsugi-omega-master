@@ -1,0 +1,30 @@
+Read `C:\myspace\hacckathons\Blueprint_Omega_Master.md`. 
+We are operating in `C:\myspace\hacckathons\kintsugi-omega-master` starting from HEAD `3cc8c2b` (all offline blocks 1-5 complete). 
+
+We need to close the final 4 Tier-1 architectural gaps from the master blueprint before our weekly limit resets. Implement these strictly and sequentially:
+
+1. Proof Bundle Emission (§7.4, E.3):
+   - In `kintsugi/control/workflows.py` (Incident workflow), write the concrete `evidence/<INC>/bundle.json` payload matching the E.3 schema upon incident resolution.
+   - Attach `bundle_sha256` to the corresponding ledger entry so audit check C1 and `make judge` have true input artifacts on disk.
+2. Crew Senses Telemetry (§4.1.2):
+   - Wrap crew role executions to emit `kintsugi:<role>` traces, an `incident:<INC>` root span, and the shared `inc-<id>` session ID so audit check C10 can reconcile incident costs against session telemetry.
+3. Saboteur Healer Port (§6.6, Appendix B):
+   - Wire the Saboteur delivery lane to dispatch `healer.*` specs directly to the existing Watchdog chaos API so S-18 can be triggered autonomously.
+4. L4 MainWatcher Runtime (§6.4):
+   - Ensure `scripts/w-runtime.sh` launches `MainWatcher` as a background daemon to monitor `origin/main` and signal `drift` into active Temporal incident workflows.
+5. Verification & Disclosure:
+   - Run targeted tests for bundle generation, senses telemetry, and healer delivery.
+   - Record Amendment A-81 in `docs/EXECUTION_PLAN.md`, `docs/VERIFICATION.md`, and `MASTER_HANDOFF.md` detailing these completions and formally documenting the remaining roadmap choices (Ed25519 local vs KMS, deterministic retrieval vs embeddings).
+   - Ensure `uv run pytest` passes cleanly, commit with Entire checkpoint tracking, push `main`, and confirm CI is green.
+
+Execute immediately without stopping for confirmation.github repo link where we need to push :https://github.com/suryaprasanthcse/kintsugi-omega-master
+
+---
+
+<task-notification>
+<task-id>bbfesiuau</task-id>
+<tool-use-id>toolu_01BDTRCXQzfkeBrt5exKSWzp</tool-use-id>
+<output-file>C:\Users\surya\AppData\Local\Temp\claude\C--myspace-hacckathons-kintsugi-omega-master\31f65c63-a11e-49e2-aa32-0e76d95c8a8d\tasks\bbfesiuau.output</output-file>
+<status>completed</status>
+<summary>Background command "Run affected existing test suites" completed (exit code 0)</summary>
+</task-notification>
