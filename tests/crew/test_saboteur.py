@@ -251,3 +251,29 @@ def test_a_spec_without_a_delivery_port_is_refused_without_retries(
     assert DeliveryRefused in NON_RETRYABLE
     assert "DeliveryRefused" in SPECS["deliver_sabotage"].non_retryable
     assert list(ledger.entries()) == []
+
+
+def test_delivery_waits_for_the_ledgers_second_so_c6_holds() -> None:
+    """Regression (omega-ci on 0c33206): the ledger floors ``at`` to whole seconds, so a
+    delivery 0.5 s after a fractional ``not_before`` was recorded before it and C6 failed."""
+    from kintsugi.crew.factory import deliverable
+    from kintsugi.proof.audit import _sabotage_order
+
+    not_before = datetime(2026, 10, 13, 10, 0, 1, 300_000, tzinfo=UTC)
+    same_second = not_before + timedelta(milliseconds=500)  # 10:00:01.8 → recorded 10:00:01
+    assert not deliverable(same_second, not_before)
+    assert deliverable(datetime(2026, 10, 13, 10, 0, 2, tzinfo=UTC), not_before)
+    record = {"c": "sha256:x", "sealed_at": "2026-10-13T10:00:00Z",
+              "not_before": not_before.isoformat()}  # fmt: skip
+    sealed_entry = {"type": "sabotage", "event": "sealed", "sabotage": "S", "c": "sha256:x",
+                    "seq": 2}  # fmt: skip
+
+    def delivered(at: datetime) -> dict[str, Any]:
+        return {"type": "sabotage", "event": "delivered", "sabotage": "S", "seq": 3,
+                "at": at.isoformat(timespec="seconds")}  # fmt: skip
+
+    assert _sabotage_order("S", record, [sealed_entry, delivered(same_second)]) == [
+        "S: delivered before not_before"]  # what the old gate let through  # fmt: skip
+    assert _sabotage_order("S", record, [sealed_entry,
+                                         delivered(datetime(2026, 10, 13, 10, 0, 2,
+                                                            tzinfo=UTC))]) == []  # fmt: skip

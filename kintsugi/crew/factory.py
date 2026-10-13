@@ -102,6 +102,13 @@ class Anchoring:
     remote: str | None = None
 
 
+def deliverable(now: datetime, not_before: datetime) -> bool:
+    """Whether a sealed spec may be delivered now. The ledger records ``at`` in whole seconds
+    (floored) and audit C6 refuses a delivery whose ``at`` is before ``not_before``, so the gate
+    compares at the ledger's precision: within ``not_before``'s own second, wait for the next."""
+    return now.replace(microsecond=0) >= not_before
+
+
 @dataclass
 class SabotageLane:
     """Stage 8: the Saboteur's activities. ``identity`` is the age secret that opens the sealed
@@ -495,7 +502,7 @@ class OmegaCrew:
         spec, _seal, patch = lane.saboteur.open(spec_id, lane.identity)
         not_before = datetime.fromisoformat(str(spec["schedule"]["not_before"]).replace("Z",
                                             "+00:00"))  # fmt: skip
-        if datetime.now(UTC) < not_before:
+        if not deliverable(datetime.now(UTC), not_before):
             raise SabotageRefused(f"{spec_id}: not before {spec['schedule']['not_before']}")
         mine = [e for e in self.ledger.entries() if e.get("sabotage") == spec_id]
         if any(e.get("event") == "delivered" for e in mine):

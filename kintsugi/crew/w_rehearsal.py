@@ -265,7 +265,9 @@ def run(cfg: WRehearsal) -> dict[str, Any]:
     crew.sabotage = SabotageLane(saboteur, secret, deliver=lane.deliver)  # pre-T0 seal: no publish
     step: Any = None
     crew.do_seal_sabotage(step, SPEC_ID)
-    time.sleep(max(0.0, (not_before - datetime.now(UTC)).total_seconds()) + 0.5)
+    # The ledger's `at` is whole seconds: deliver from the second after not_before's (C6).
+    first_second = not_before.replace(microsecond=0) + timedelta(seconds=1)
+    time.sleep(max(0.0, (first_second - datetime.now(UTC)).total_seconds()) + 0.2)
     crew.do_deliver_sabotage(step, SPEC_ID)
     cfg.log(f"[{cfg.run}] delivered through {pulls.pulls[1]['url']} ({pulls.pulls[1]['head']})")
     tag = crew.do_anchor_ledger(step, 0)

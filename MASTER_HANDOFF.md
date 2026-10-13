@@ -133,8 +133,10 @@ Recommended order: **13a** (runtime wiring) → **9** → **12** → **10** → 
   workflow); `business/cfo_export/{scenarios,scenario_months,coverage_scenarios}.csv`.
 - **Commits:** `640e046` (Block 1), `3e0d61e` (2), `289ac60` (3), `1c06c0c` (4), `8f8de50` (the
   SQLite race that made omega-ci red on `640e046`), `3132eff` and `57c6938` (5), then the docs
-  commit recording this section, which also makes a flaky Temporal query test tolerant
-  (omega-ci was red on `57c6938` only for that test). The new `audit` workflow is green.
+  commit recording this section (`0c33206`, which also makes a flaky Temporal query test
+  tolerant; omega-ci was red on `57c6938` only for that test), and a fix for a latent C6 timing
+  defect that made omega-ci red on `0c33206` (delivery gated at the ledger's one-second
+  precision). The new `audit` workflow is green.
 - **Tests:** **1018 passed, 30 skipped** in one full run on `57c6938` (15 min 54 s).
 - **Audit:** `kintsugi audit --all --offline ./published-bundles` exits 2 by design until a real
   window exists (C11, C14 PASS; the rest SKIP); `kintsugi demo` exits 0 (C1, C6 PASS).

@@ -53,6 +53,11 @@ no foreign repository, no neatlogs or cfo.ai call. Every commit carries one veri
   was continuing as new and got "query deadline exceeded"; the test's later wait already
   tolerated that, its first wait and final reads did not. Test-only fix in the docs commit,
   5/5 passes locally.
+- omega-ci red on `0c33206`: the W rehearsal's C6 failed with "delivered before not_before". The
+  ledger floors `at` to whole seconds while `not_before` keeps microseconds, and the crew gated
+  delivery on the precise time, so a delivery in `not_before`'s own second was recorded before
+  it (latent since Stage 13a; it would also have hit Arena deliveries in W). The gate now
+  compares at the ledger's precision (`factory.deliverable`); C6 stays strict; regression test.
 - `SenseStore.close()` closed only the calling thread's connection, so a finished rehearsal
   could not delete its files on Windows; it now closes every connection it opened.
 - The first OSS-1 evidence through the desk recorded a local scratch path; it is now relative.
