@@ -25,6 +25,7 @@ import json
 import sqlite3
 import threading
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
@@ -37,6 +38,7 @@ from temporalio.converter import default as default_converter
 from temporalio.exceptions import ApplicationError
 
 from kintsugi.control import contracts as c
+from kintsugi.control.dbconn import connect, enable_wal
 
 CREW, SURGEON, SENSES = "kintsugi-crew", "kintsugi-surgeon", "kintsugi-senses"
 TASK_QUEUES = (CREW, SURGEON, SENSES)
@@ -234,15 +236,13 @@ class SqliteLedger:
         self.path = str(path)
         if self.path != ":memory:":
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
+        enable_wal(self.path)  # once per file, retried (kintsugi.control.dbconn)
         with self._db() as db:
             db.execute("CREATE TABLE IF NOT EXISTS activity_results (idem_key TEXT PRIMARY KEY,"
                        " data BLOB NOT NULL, at REAL DEFAULT (julianday('now')))")  # fmt: skip
 
-    def _db(self) -> sqlite3.Connection:
-        db = sqlite3.connect(self.path, timeout=5.0)
-        db.execute("PRAGMA journal_mode = WAL")
-        db.execute("PRAGMA busy_timeout = 5000")
-        return db
+    def _db(self) -> AbstractContextManager[sqlite3.Connection]:
+        return connect(self.path)  # shared by every worker: waits, commits, always closes
 
     def get(self, key: str) -> bytes | None:
         with self._db() as db:

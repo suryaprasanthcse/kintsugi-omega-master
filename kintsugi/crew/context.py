@@ -13,11 +13,13 @@ import sqlite3
 import threading
 import time
 from collections.abc import Callable, Iterable, Mapping
+from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
 from kintsugi.control import contracts as c
+from kintsugi.control.dbconn import connect, enable_wal
 from kintsugi.crew.casefile import CaseFile
 from kintsugi.crew.llm import Model
 from kintsugi.gates.canary import BASELINES
@@ -90,16 +92,15 @@ class IncidentIndex:
         self.first = first
         self._lock = threading.Lock()
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
+        enable_wal(self.path)  # once per file, retried (kintsugi.control.dbconn)
         with self._db() as db:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS incidents (id TEXT PRIMARY KEY, host TEXT, "
                 "receptor TEXT, opened_at REAL, n INTEGER UNIQUE)"
             )
 
-    def _db(self) -> sqlite3.Connection:
-        db = sqlite3.connect(self.path, timeout=10.0)
-        db.execute("PRAGMA journal_mode = WAL")
-        return db
+    def _db(self) -> AbstractContextManager[sqlite3.Connection]:
+        return connect(self.path)  # shared by workers: waits, commits, always closes
 
     def open(self, host: str, receptor: str) -> str:
         with self._lock, self._db() as db:

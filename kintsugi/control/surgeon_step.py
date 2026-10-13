@@ -22,12 +22,14 @@ from __future__ import annotations
 import sqlite3
 import time
 from collections.abc import Callable, Collection
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
 from kintsugi.control import contracts as c
 from kintsugi.control.activities import StepContext
+from kintsugi.control.dbconn import connect, enable_wal
 from kintsugi.proof import passphrase
 from kintsugi.proof.attest import parse_trailers
 from kintsugi.sandbox import proc, worktree
@@ -42,6 +44,7 @@ class AttemptLog:
         self.path = str(path)
         if self.path != ":memory:":
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
+        enable_wal(self.path)  # once per file, retried (see kintsugi.control.dbconn)
         with self._db() as db:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS surgeon_attempts (nonce TEXT PRIMARY KEY,"
@@ -50,11 +53,8 @@ class AttemptLog:
                 "'abandoned')), commit_sha TEXT, note TEXT, at REAL NOT NULL)"
             )
 
-    def _db(self) -> sqlite3.Connection:
-        db = sqlite3.connect(self.path, timeout=5.0)
-        db.execute("PRAGMA journal_mode = WAL")
-        db.execute("PRAGMA busy_timeout = 5000")
-        return db
+    def _db(self) -> AbstractContextManager[sqlite3.Connection]:
+        return connect(self.path)  # waits for parallel Surgeons, commits, always closes
 
     def issue(self, incident: str, hypothesis: str, attempt: int, nonce: str) -> None:
         with self._db() as db:
