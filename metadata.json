@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4TCA8BSSKWG0H8HS5A9T8C3",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "MASTER_HANDOFF.md",
+    "docs/VERIFICATION.md",
+    "kintsugi/crew/factory.py",
+    "kintsugi/crew/w_rehearsal.py",
+    "tests/crew/test_saboteur.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 24,
+    "cache_creation_tokens": 12391,
+    "cache_read_tokens": 8884972,
+    "output_tokens": 8439,
+    "api_call_count": 11
+  }
+}
