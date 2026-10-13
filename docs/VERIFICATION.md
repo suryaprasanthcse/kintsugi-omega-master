@@ -14,6 +14,42 @@ evidence that reproduces it. Numbers are copied from committed artifacts or from
 | `kintsugi audit` C1–C14 catches tampering of every kind it checks | Stage 8, 33 mutation tests |
 | The autonomous window W was **not run**; Stages 9–12 are **descoped** | Architect's go/no-go, 2026-10-12; README "Disclosure" |
 | Master Edition (after the submission): Stages 13a, 9 and 12 and offline Stage 10/11 modules built and verified offline | "Master Edition overnight run" below |
+| Master Edition offline items: placeholder runway, OSS-1 onboarding rehearsal, Arena board and service; full suite **970 passed, 30 skipped** in one run | "Master Edition offline items" below |
+
+## Master Edition offline items (2026-10-13): runway, OSS-1 rehearsal, Arena board
+
+Recorded 2026-10-13 10:55–12:00 IST on Windows 11 (Entire 0.11.4, entire-graph v0.4.0), in a
+session the Architect authorised to run the remaining offline items without stopping.
+Amendments A-73 … A-75. Nothing reached neatlogs, cfo.ai, GitHub (beyond pushes to this
+repository) or a foreign repository; no model session ran. Every commit carries one verified
+`Entire-Checkpoint` whose `files_touched` covers it.
+
+| Target | Result | Evidence |
+|---|---|---|
+| 9 runway computed and labelled | ✅ runway **14.4 months** (net burn $17,376.27/month) from **disclosed placeholder** cash $250,000 and fixed costs $18,000/month; the status column says so while `company.placeholder` is true; null figures still say what to set | `business/cfo_export/runway.csv`, `tests/econ/test_cfo_sync.py` (A-73) |
+| 10 OSS-1 onboarded end to end (rehearsal) | ✅ on the disclosed CRM practice host (OSS-1 itself is the Architect's choice): intake with 5 consents (foreign, PR-only), health card, **24 exported traces replayed** through `load_trace`, 22 seed evals, baseline 0.125 [0.043, 0.310] under the stress profile, immune scan matches **AB-1@1.1** (`sync_contacts` / `attempt` / `SyncSession`), receipt PR-only with no merge | `evidence/rehearsals/oss1-20261013-053800.json`, `tests/onboard/test_oss1_rehearsal.py` (A-74) |
+| 10 nothing leaves the machine | ✅ 0 non-loopback connections (a socket guard in the host process and the rehearsal's), 0 foreign posts, no GitHub/neatlogs/cfo.ai client constructed | same |
+| 10 replay mode from exported traces | ✅ the local export has the Public API's shape and replays into the same `TraceRecord` (verdicts, failing tool spans, repro spec); seeded ids make a seed's export repeatable | `tests/onboard/test_oss1_rehearsal.py` |
+| 11 Arena board | ✅ static `arena/` (no build step, no external URL but the SVG namespace, API values inserted as text): fleet, incident stream, immunity matrix, learning curve, ledger head and escalations, "Sabotage it" form from the API's schemas; checked in a browser at 1280 px and 375 px (no horizontal overflow, no console errors) | `tests/test_arena_service.py` (A-75) |
+| 11 real service factory | ✅ `Saboteur.seal` then the `SabotageCampaign.request` signal; the signal reaches a running campaign on a Temporal time-skipping server from another thread; closed before W (503, no limit spent); a sealed request the campaign did not take answers 503 with its commitment and never reuses its id | same |
+| 11 `kintsugi arena serve` | ✅ closed without a runtime, open with the W runtime's sabotage store; Temporal target, campaign id and daily cap configurable | same |
+| Full suite, one run | ✅ **970 passed, 30 skipped** (the contract and model-tier tests) in 15 min 25 s on `f6e1cb8`; omega-ci green on `f6e1cb8` | `uv run pytest -q`, 2026-10-13 |
+
+### Defects found while building, all fixed
+
+- The first full run on `48a1fd4` had 1 failure (968 passed): the OSS-1 evidence pins the CRM
+  fixture's tree digest, and a gate test leaves an ignored `.ruff_cache` inside the fixture, so
+  the digest changed. omega-ci was red on `69b46cb` and `48a1fd4` for the same reason; fixed in
+  `f6e1cb8` (tool caches excluded; the committed digest is unchanged).
+- The OpenTelemetry provider needs an `IdGenerator` subclass (`is_trace_id_random`) for seeded
+  ids.
+
+### Known limits carried forward
+
+- The cash and fixed costs are placeholders until the Architect sets them (A-73).
+- OSS-1 on a real repository, and every foreign post, wait for the Architect (A-74).
+- The Arena's model-assisted compiler and chaos-proxy deliveries are not wired; the Arena stays
+  closed until W provides a sabotage store and a running `SabotageCampaign` (A-75).
 
 ## Master Edition overnight run (2026-10-13): Stages 13a, 9, 12, offline 10/11
 
