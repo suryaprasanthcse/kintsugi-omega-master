@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4T32EV5AZ41GRW19R2T82E9",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "evidence/rehearsals/oss1-20261013-073328.json",
+    "kintsugi/cli.py",
+    "kintsugi/onboard/desk.py",
+    "kintsugi/onboard/eval_synth.py",
+    "kintsugi/onboard/instrument.py",
+    "kintsugi/onboard/rehearsal.py",
+    "kintsugi/onboard/workflow.py",
+    "tests/fixtures/rehearsal/oss1/intake.md",
+    "tests/onboard/test_onboarding_workflow.py",
+    "tests/onboard/test_oss1_rehearsal.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 44,
+    "cache_creation_tokens": 63418,
+    "cache_read_tokens": 13396427,
+    "output_tokens": 41075,
+    "api_call_count": 22
+  }
+}
