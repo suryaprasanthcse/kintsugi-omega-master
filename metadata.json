@@ -1,0 +1,50 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4T27QMTG0V6SVQ9N43XR23S",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    ".github/ISSUE_TEMPLATE/clinic-intake.yml",
+    "kintsugi/arena_api.py",
+    "kintsugi/arena_service.py",
+    "kintsugi/control/activities.py",
+    "kintsugi/control/workflows.py",
+    "kintsugi/crew/factory.py",
+    "kintsugi/crew/runtime.py",
+    "kintsugi/crew/saboteur.py",
+    "kintsugi/fleet/fabric.py",
+    "kintsugi/fleet/runtime.py",
+    "kintsugi/onboard/desk.py",
+    "kintsugi/onboard/eval_synth.py",
+    "kintsugi/onboard/intake.py",
+    "kintsugi/onboard/pipeline.py",
+    "kintsugi/onboard/rehearsal.py",
+    "kintsugi/onboard/trace_export.py",
+    "kintsugi/sandbox/chaos_overlay.py",
+    "kintsugi/sandbox/chaos_proxy.py",
+    "tests/control/test_workflows.py",
+    "tests/crew/test_crew_handlers.py",
+    "tests/crew/test_saboteur.py",
+    "tests/onboard/test_onboard.py",
+    "tests/onboard/test_oss1_rehearsal.py",
+    "tests/sandbox/test_chaos_overlay.py",
+    "tests/test_arena_service.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 150,
+    "cache_creation_tokens": 161896,
+    "cache_read_tokens": 34550041,
+    "output_tokens": 91623,
+    "api_call_count": 73
+  }
+}

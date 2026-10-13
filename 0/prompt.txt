@@ -1,0 +1,73 @@
+<pasted_content id="45d5">
+STRICT READ-ONLY AUDIT — DO NOT EDIT FILES, RUN TESTS, OR EXECUTE COMMANDS.
+
+Read the following architecture blueprints and handoff documents:
+1. `MASTER_HANDOFF.md`
+2. `STAGE_8_13_HANDOFF.md` (if present in the tree)
+3. `docs/EXECUTION_PLAN.md`
+4. `docs/VERIFICATION.md`
+
+Your task is to act as the Chief Architect and perform a ruthless gap analysis of the current repository state (HEAD `74ce382` or later) against the complete 13-Stage KINTSUGI-Ω blueprint. 
+
+Output a concise, categorized report detailing:
+1. FULLY IMPLEMENTED: Which of the 13 stages are 100% complete, offline-verified, and pushed?
+2. INTENTIONALLY DEFERRED / DISCLOSED: Which items were explicitly and correctly scoped out to live/foreign environments (e.g., live Window W execution, S-17/18/19 cryptographic sealing, foreign OSS-1 network calls)?
+3. THE GAP (REMAINING DEBT): Are there any undocumented stubs, missing unit tests, broken invariants, placeholder variables that weren't disclosed, or loose ends in the codebase that were missed during the overnight and morning runs?
+
+CRITICAL RULE: You are in Audit Mode. You must NOT write code, attempt to fix bugs, run `pytest`, or execute any `git` commands. Simply report the exact truth of the repository and await my next command.
+</pasted_content id="45d5">
+
+---
+
+also read this file
+
+---
+
+<task-notification>
+<task-id>b9mwslmwl</task-id>
+<tool-use-id>toolu_01VjGjk5eQatQ9Cv8tMoYbbc</tool-use-id>
+<output-file>C:\Users\surya\AppData\Local\Temp\claude\C--myspace-hacckathons-kintsugi-omega-master\6ec8f922-2eb8-485f-8cc3-ee5110304556\tasks\b9mwslmwl.output</output-file>
+<status>completed</status>
+<summary>Background command "Wait for omega-ci on the docs commit" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+FULL BLUEPRINT IMPLEMENTATION — RESOLVE ALL AUDIT GAPS (1 THROUGH 13).
+
+We are completing 100% of the master specification in `C:\myspace\hacckathons\kintsugi-omega-master` to produce a fully realized, zero-stub enterprise codebase. Do not defer or downgrade items to disclosures. Implement, test, and commit all items across the following five blocks:
+
+### BLOCK 1: Runtime & Crew Activity Wiring (Gaps 1, 2, 13)
+1. In `factory.py`, implement concrete Arena fault delivery handling so `do_deliver_sabotage` handles Arena classes safely, and wrap delivery executions with an isolation guard so unhandled payloads never crash `SabotageCampaign.run`.
+2. Wire the missing `onboard_step` handler in `factory.py:177` so all 38 declared crew activities have active handlers.
+3. Update `test_arena_service.py` to test `arena_state` / `load_ledger` against real branch records without monkeypatching, and ensure trace export records non-zero token/cost structures.
+Targeted tests: Run pytest on factory, activities, workflows, and arena_service. Commit as Block 1.
+
+### BLOCK 2: Arena UI & State Engine Parity (Gaps 6, 7)
+1. Update `arena/index.html` (and static assets) to render:
+   - Open incident counts and the last canary outcome on the fleet board.
+   - The "vulnerable" state inside the immunity matrix heatmap.
+   - A true log-log learning curve (ln n vs. ln cost) with the empirical Wright's Law slope.
+   - The latest anchor hash beside the ledger head.
+2. In `kintsugi/arena_api.py`, fix specification counter state handling so database resets cannot produce duplicate or colliding spec IDs against the sealed store.
+Targeted tests: Validate API endpoints, static UI DOM rendering, and ID sequencing. Commit as Block 2.
+
+### BLOCK 3: Onboarding Pipeline & Static Scanner (Gaps 3, 4, 5)
+1. Ensure the onboarding CLI and test suites route execution through the full `Onboarding` crew workflow activity chain.
+2. Upgrade the static scanner in `kintsugi/onboard` to detect tools declared via `@span(kind="TOOL")` and outgoing HTTP client methods in host code.
+3. Ensure evaluation synthesis differentiates transient retries from true failure seeds.
+Targeted tests: Run pytest on onboard modules and fixture suites. Commit as Block 3.
+
+### BLOCK 4: Economic Cortex Multi-Scenario Engine (Gap 8)
+1. Implement multi-scenario projection modeling in `kintsugi/econ/` to generate `business/cfo_export/scenarios.csv` alongside `runway.csv`.
+2. Model the Base (+25% growth), Growth (+40% growth), and Network (vaccination prevention + compounding coverage) scenarios matching §10, calculating breakeven month and lowest-cash points dynamically.
+3. Rerun `uv run kintsugi econ cfo-export` and ensure all export files match committed hashes.
+Targeted tests: Run pytest on econ modules and test_cfo_sync.py. Commit as Block 4.
+
+### BLOCK 5: CLI Polish, Documentation & Verification (Gaps 9, 10, 11, 12)
+1. Implement `kintsugi demo` in `cli.py` to run a clean, deterministic local replay of a sealed sabotage incident and verification loop (exit 0).
+2. Wire the callers for `traces.feedback` in the neatlogs senses layer.
+3. Fix stale docstrings in `factory.py` and ensure `.github/workflows/audit.yml` matches the C1–C14 specification.
+4. Run the full unified test suite (`uv run pytest`), verify `kintsugi audit --all --offline ./published-bundles` exits 0, update `README.md`, `docs/EXECUTION_PLAN.md`, `docs/VERIFICATION.md`, and `MASTER_HANDOFF.md` to reflect complete zero-gap implementation. Commit, push `main`, and verify `omega-ci` is green.
+
+Execute Block 1 immediately and proceed sequentially through Block 5.
