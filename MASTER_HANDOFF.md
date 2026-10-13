@@ -145,9 +145,29 @@ Recommended order: **13a** (runtime wiring) → **9** → **12** → **10** → 
   (P1, §5), the Textual operator TUI, onboarding's dependency install in gVisor and cassettes
   from trace exports (A-77).
 
+### State after the 2026-10-13 Tier-1 closure (A-81)
+
+- **Built:** `kintsugi/crew/bundler.py` and the `emit_bundle` activity (every Incident closes
+  with `evidence/<INC>/bundle.json`, its `bundle_sha256` on the closing ledger entry, C1 reads
+  it); `kintsugi/crew/telemetry.py` (`kintsugi:<role>` traces, `incident:<INC>` roots, session
+  `inc-<INC>`, each cost line reported once, journal in the bundle for C10);
+  `kintsugi/crew/healer.py` (`healer.kill_worker` and `healer.webhook_outage` through the
+  Watchdog's chaos API, S-18 as one sealed spec with `target.together`); `kintsugi control
+  watch-main`, spawned by `scripts/w-runtime.sh up` (L4 drift from `origin/main`).
+- **Tests:** **1038 passed, 30 skipped** in one full run (15 min 39 s); 19 new tests.
+- **Roadmap choices, the Architect's:** signing stays local Ed25519 unless AWS KMS
+  `ECC_NIST_P256` + CloudTrail is wanted as an external witness; antibody retrieval stays
+  deterministic (exact φ, weighted fields at θ 0.85, motif) unless §5.8.3's neatlogs semantic
+  search + embeddings is wanted for recall. Costs and trade-offs: `docs/EXECUTION_PLAN.md`,
+  "Roadmap choices still open (A-81)".
+- **Still open:** neatlogs export of crew traces and spike A3 (session cost from the cost
+  attribute) need this edition's neatlogs project; S-18 on real pools and real bundles need W.
+  **Not built yet:** the Arena's model-assisted free-text compiler, the Textual operator TUI,
+  onboarding's dependency install in gVisor and cassettes from trace exports (A-77).
+
 ## 5. Open issues carried over
 
 - A-38 neatlogs alert rules silent; A-39 3–4% trace loss; the ingress webhook points at a dead quick-tunnel URL (re-provision in the new neatlogs project).
 - C7–C10 and C12 live ports (`gh api`, neatlogs) have only run against recorded answers.
-- P1: per-incident proof bundles (`evidence/<INC>/bundle.json`) and `make judge` over `published-bundles/`.
+- P1: per-incident proof bundles are built (A-81); `make judge` over `published-bundles/` still has no real bundle to read until W runs and its bundles are published.
 - An orphan checkpoint `01M4QS4028Z1NPCGW09SMPM8YC` (an undone, never-pushed commit) exists among the checkpoint refs, linked to no commit.

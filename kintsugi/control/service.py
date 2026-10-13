@@ -1,4 +1,5 @@
-"""Wiring for ``kintsugi control``: the supervisor, the queue forwarder, the Watchdog, T8 export.
+"""Wiring for ``kintsugi control``: the supervisor, the queue forwarder, the Watchdog, T8 export,
+and the main-branch watcher that signals L4 drift (§6.4).
 
 State lives under ``.state/control/`` and ``.state/watchdog/`` (gitignored): the step ledger, the
 attempt log, the chaos token (256-bit, never printed), the heartbeat and the pages.
@@ -68,6 +69,55 @@ async def forward(target: str, store_path: Path, supervisor_id: str, *, once: bo
     return forwarder.delivered
 
 
+async def watch_main(
+    target: str,
+    repos: Mapping[str, Path],
+    supervisor_id: str,
+    *,
+    remote: str | None = "origin",
+    branch: str = "main",
+    state_path: Path | None = None,
+    interval_s: float = 30.0,
+    once: bool = False,
+    signal: Any = None,  # tests: an async (repo, new_main) callable instead of Temporal
+    log: Any = print,
+) -> int:
+    """L4 (§6.4): poll ``<remote>/<branch>`` and signal ``drift(repo, new_main)`` into the
+    FleetSupervisor, which forwards it to every open Incident (``drift_signal``). A poll that
+    fails (a fetch without network, a signal the server refused) is retried on the next tick
+    and the move it saw is reported again; nothing is dropped. Returns the drifts signalled."""
+    from kintsugi.senses.drift import Drift, MainWatcher
+
+    send = signal
+    if send is None:
+        from temporalio.client import Client
+
+        client = await Client.connect(target)
+        supervisor = client.get_workflow_handle(supervisor_id)
+
+        async def send(repo: str, new_main: str) -> None:
+            await supervisor.signal("drift", args=[repo, new_main])
+
+    loop = asyncio.get_running_loop()
+
+    def on_drift(drift: Drift) -> None:  # runs in the polling thread; waits for the signal
+        asyncio.run_coroutine_threadsafe(send(drift.repo, drift.new_main), loop).result(60)
+        log(f"drift {drift.repo}: {drift.old_main[:12]} -> {drift.new_main[:12]} signalled")
+
+    watcher = MainWatcher(repos, on_drift, branch=branch, state_path=state_path, remote=remote)
+    signalled = 0
+    while True:
+        try:
+            signalled += len(await asyncio.to_thread(watcher.poll_once))
+        except Exception as error:  # the watcher keeps watching (logged)
+            log(f"watch-main: poll failed, retrying: {type(error).__name__}: {error}"[:500])
+            if once:
+                raise
+        if once:
+            return signalled
+        await asyncio.sleep(interval_s)
+
+
 def chaos_token(repo: Path) -> str:
     path = repo / WATCHDOG_DIR / "chaos.token"
     if path.is_file():
@@ -81,9 +131,10 @@ def chaos_token(repo: Path) -> str:
 
 
 # What the worker pools need beyond the gateway's allowlist: the W runtime file (Stage 13a) and
-# the neatlogs Public API credentials the crew reads failing traces with. Passed explicitly.
+# the neatlogs Public API credentials the crew reads failing traces with, and the ingest key and
+# endpoint its own kintsugi:<role> traces are exported with (§4.1.2). Passed explicitly.
 POOL_ENV = ("KINTSUGI_RUNTIME", "NEATLOGS_PROJECT_ID", "NEATLOGS_SERVICE_TOKEN",
-            "NEATLOGS_OAUTH_TOKEN")  # fmt: skip
+            "NEATLOGS_OAUTH_TOKEN", "NEATLOGS_API_KEY", "NEATLOGS_ENDPOINT")  # fmt: skip
 
 
 def pool_env(source: Mapping[str, str]) -> dict[str, str]:

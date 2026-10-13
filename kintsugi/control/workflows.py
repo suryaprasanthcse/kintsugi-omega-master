@@ -5,6 +5,7 @@
   limit, forwards ``drift``, holds budgets and paused antibodies; ``continue_as_new`` every N.
 - ``Incident``: the §5.13 loop. Every state change is a legal ``states.py`` transition, the run
   always ends RESOLVED, ESCALATED or PARKED (I3), and nothing ships without a G0–G6 winner (I1).
+  It closes with its proof bundle (§7.4), whose digest the closing ledger entry records.
 - ``Canary``: a Wald SPRT on live-traffic batches, with durable timers between them.
 - ``CrossHostMaturation``: applies a candidate antibody to a second matching host.
 - ``VaccinationWave``: a motif scan, then per-host application; pausable by signal.
@@ -20,7 +21,7 @@ Code changes to running workflows go behind ``workflow.patched("…")``.
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import timedelta
 from typing import Any
 
@@ -44,6 +45,7 @@ ANTIBODY_LIFECYCLE = "antibody-lifecycle"  # Stage 7: maturation promotes MATURE
 L3_VACCINATION_CANARY = "l3-vaccination-canary"  # Stage 7: canary, revert, quarantine, refine
 PAUSE_FORWARD = "pause-forwards-to-wave"  # Stage 7: pause_antibody reaches the running wave
 CAMPAIGN_DELIVERY_GUARD = "campaign-delivery-guard"  # one failed delivery never ends a campaign
+INCIDENT_PROOF_BUNDLE = "incident-proof-bundle"  # §7.4: bundle.json, its digest on the ledger
 
 
 async def act(name: str, *args: Any, config: c.ControlConfig, result_type: Any = None) -> Any:
@@ -74,6 +76,11 @@ class Incident:
         self.drift: tuple[str, str] | None = None
         self.attached: list[c.Hit] = []
         self.hypotheses: dict[str, int] = {}  # every hypothesis id used, across passes
+        # What the proof bundle needs from the loop itself (the latest pass wins).
+        self.failing: tuple[str, ...] = ()
+        self.canary: c.CanaryResult | None = None
+        self.winner: c.SurgeonOutcome | None = None
+        self.antibody: c.AntibodyRef | None = None
 
     @workflow.signal
     def drift_signal(self, repo: str, new_main: str) -> None:
@@ -95,10 +102,21 @@ class Incident:
     @workflow.run
     async def run(self, alert: c.Alert, config: c.ControlConfig) -> c.Outcome:
         outcome = await self._loop(alert, config)
-        await act("ledger_append", {"type": "incident", "incident": alert.incident_id,
-                                    "state": outcome.state, "reason": outcome.reason,
-                                    "transitions": len(self.transitions)},
-                  config=config, result_type=str)  # fmt: skip
+        entry: dict[str, Any] = {"type": "incident", "incident": alert.incident_id,
+                                 "state": outcome.state, "reason": outcome.reason,
+                                 "transitions": len(self.transitions)}  # fmt: skip
+        if workflow.patched(INCIDENT_PROOF_BUNDLE):
+            # §7.4: every incident closes with evidence/<INC>/bundle.json, and its SHA-256 goes
+            # into the incident's ledger entry (E.2) for audit C1. A bundle that cannot be
+            # written is recorded as such; the incident still closes (I3).
+            try:
+                ref = await act("emit_bundle", self._closing(alert, outcome), config=config,
+                                result_type=c.BundleRef)  # fmt: skip
+                entry["bundle_sha256"] = ref.sha256
+            except ActivityError as error:
+                cause = error.cause if error.cause is not None else error
+                entry["bundle_error"] = f"{type(cause).__name__}: {cause}"[:300]
+        await act("ledger_append", entry, config=config, result_type=str)
         if alert.supervisor_id:
             supervisor = workflow.get_external_workflow_handle(alert.supervisor_id)
             await supervisor.signal("incident_closed", args=[alert.incident_id, outcome.state])
@@ -118,6 +136,27 @@ class Incident:
     def _end(self, incident_id: str, reason: str, shipment: c.Shipment | None = None) -> c.Outcome:
         return c.Outcome(incident_id, self.state, reason, tuple(self.transitions), shipment)
 
+    def _closing(self, alert: c.Alert, outcome: c.Outcome) -> dict[str, Any]:
+        """The facts only the workflow holds, for the crew's bundle (plain data, no I/O)."""
+        canary = self.canary
+        return {
+            "incident": alert.incident_id,
+            "host": alert.host,
+            "state": outcome.state,
+            "reason": outcome.reason,
+            "pass": alert.reentries,
+            "transitions": [f"{t.source}->{t.target}" for t in self.transitions],
+            "traces": {"failing": list(self.failing),
+                       "after": list(canary.trace_ids) if canary else []},
+            "canary": None if canary is None else {
+                "accepted": canary.accepted, "rejected": canary.rejected,
+                "n": canary.samples, "llr": canary.llr},
+            "winner": None if self.winner is None else asdict(self.winner),
+            "shipment": None if outcome.shipment is None else asdict(outcome.shipment),
+            "antibody": None if self.antibody is None
+            else f"{self.antibody.antibody_id}@{self.antibody.version}",
+        }  # fmt: skip
+
     async def _escalate(self, incident_id: str, reason: str, config: c.ControlConfig) -> c.Outcome:
         await act("escalate", incident_id, reason, config=config)
         return self._end(incident_id, reason)
@@ -127,6 +166,7 @@ class Incident:
         while True:
             sig = await act("triage", alert, config=config, result_type=c.Signature)
             sig = replace(sig, pass_no=alert.reentries)
+            self.failing = sig.trace_ids
             await act("tag_traces", inc, list(sig.trace_ids), "before", config=config,
                       result_type=int)  # fmt: skip
             antibody = await act("match_antibody", sig, config=config,
@@ -157,6 +197,7 @@ class Incident:
                 prior = await act("fixes_prior", sig, config=config, result_type=str | None)
 
             winner = await self._rounds(sig, cause, plan, prior, config)
+            self.winner = winner
             if winner is None:
                 await self._to(inc, S.ESCALATED, "rounds_or_budget_exhausted_or_cheaper_treatment",
                                config)  # fmt: skip
@@ -176,6 +217,7 @@ class Incident:
             canary = await workflow.execute_child_workflow(
                 Canary.run, args=[shipment, config], id=f"canary-{inc}-{alert.reentries}"
             )
+            self.canary = canary
             if canary.rejected:  # L3
                 reverted = await act("revert", shipment, config=config, result_type=bool)
                 await act("quarantine_related", shipment, config=config, result_type=int)
@@ -193,6 +235,7 @@ class Incident:
                       result_type=int)  # fmt: skip
             ab = await act("synthesize_antibody", winner, cause, config=config,
                            result_type=c.AntibodyRef)  # fmt: skip
+            self.antibody = ab
             await workflow.execute_child_workflow(
                 CrossHostMaturation.run, args=[ab, sig.host, config], id=f"mature-{ab.antibody_id}"
             )

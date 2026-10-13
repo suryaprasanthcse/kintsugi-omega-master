@@ -108,6 +108,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "forward": "forward queued senses hits to the FleetSupervisor",
         "watchdog": "supervise the worker pools; serve the chaos API",
         "history": "export a workflow's server-side event history (T8)",
+        "watch-main": "poll origin/main and signal L4 drift into open incidents (§6.4)",
     }
     for name, text in commands.items():
         cmd = control_sub.add_parser(name, help=text)
@@ -117,6 +118,11 @@ def _build_parser() -> argparse.ArgumentParser:
     watch.add_argument("--crew", required=True, help="module:factory of the Crew port")
     watch.add_argument("--chaos-port", type=int, default=8790)
     watch.add_argument("--ingress-admin", help="the ingress's /admin/availability URL")
+    main_watch = control_sub.choices["watch-main"]
+    main_watch.add_argument("--remote", default="origin", help="'' watches the local branch")
+    main_watch.add_argument("--branch", default="main")
+    main_watch.add_argument("--interval", type=float, default=30.0, help="seconds between polls")
+    main_watch.add_argument("--once", action="store_true", help="poll once and exit")
     hist = control_sub.choices["history"]
     hist.add_argument("--workflow-id", required=True)
     hist.add_argument("--run-id")
@@ -707,6 +713,16 @@ def _control(args: argparse.Namespace) -> int:
         return EXIT_OK
     if args.control_command == "supervisor":
         print(asyncio.run(svc.start_supervisor(args.target, contracts.ControlConfig())))
+        return EXIT_OK
+    if args.control_command == "watch-main":
+        # The fleet's hosts all live in this repository (.kintsugi/target.yaml), so one watch
+        # covers them; the drift names the repository, the incident maps it to its host.
+        signalled = asyncio.run(svc.watch_main(
+            args.target, {repo.name: repo}, contracts.ControlConfig().supervisor_id,
+            remote=args.remote or None, branch=args.branch,
+            state_path=repo / ".state" / "runtime" / "main-watch.json",
+            interval_s=args.interval, once=args.once))  # fmt: skip
+        print(f"watch-main: {signalled} drift signal(s)")
         return EXIT_OK
     if args.control_command == "forward":
         from kintsugi.senses.service import STORE_PATH

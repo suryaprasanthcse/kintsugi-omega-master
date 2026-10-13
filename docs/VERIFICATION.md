@@ -16,6 +16,25 @@ evidence that reproduces it. Numbers are copied from committed artifacts or from
 | Master Edition (after the submission): Stages 13a, 9 and 12 and offline Stage 10/11 modules built and verified offline | "Master Edition overnight run" below |
 | Master Edition offline items: placeholder runway, OSS-1 onboarding rehearsal, Arena board and service; full suite **970 passed, 30 skipped** in one run | "Master Edition offline items" below |
 | Audit-gap closure (13 gaps): **1018 passed, 30 skipped** in one run on `57c6938`; `kintsugi demo` C1, C6 PASS | "Audit-gap closure" below |
+| Tier-1 closure (A-81): proof bundles, crew telemetry, healer port, main watcher; **1038 passed, 30 skipped** in one run | "Tier-1 closure" below |
+
+## Tier-1 closure (2026-10-13): the last four master-blueprint gaps (A-81)
+
+Recorded 2026-10-13 IST on Windows 11 (Entire 0.11.4, entire-graph v0.4.0). Offline: no model
+session, no neatlogs export (no `NEATLOGS_API_KEY` in this clone), no foreign repository.
+
+| Gap | Result | Evidence |
+|---|---|---|
+| Proof bundle emission (§7.4, E.3) | ✅ every `Incident` close writes `evidence/<INC>/bundle.json` (E.3 schema-valid, canonical bytes, attachments manifest verifies); the closing ledger entry carries `bundle_sha256` equal to the file's digest; an escalated incident still gets a bundle with no invented sections; a bundle that cannot be written is recorded as `bundle_error` and the incident still closes (I3); C1 PASSes on the bundle on disk and FAILs once its cost is edited | `tests/crew/test_proof_bundle_emission.py` (5 tests, two on a time-skipping Temporal server) |
+| Crew senses telemetry (§4.1.2) | ✅ each step is a trace under its role's client (`workflow_name` `kintsugi:<role>`); incident steps are rooted in `WORKFLOW` `incident:<INC>` with `neatlogs.session.id = inc-<INC>`; 40 cost lines written by three threads across two telemetry instances are reported exactly once (session total = case-file actuals); the bundle names the session and C10 PASSes at equal cost, FAILs at Δ 25% | `tests/crew/test_crew_telemetry.py` (6 tests; spans captured by an in-memory OpenTelemetry exporter) |
+| Saboteur healer port (§6.6, App. B) | ✅ a sealed S-18-shaped spec (`healer.kill_worker` on `surgeon-workers` plus a webhook outage) goes through the delivery lane to the real chaos app: the Surgeon pool is killed once (a retry does not repeat it) and restarted by the supervisor, the crew pool is untouched, the ingress goes dark and comes back; one `delivered` ledger entry with mode `chaos_api`; endpoint-less healer classes, the crew pool, non-healer classes and unknown pools are refused before or at the API | `tests/crew/test_healer_port.py` (4 tests) |
+| L4 MainWatcher runtime (§6.4) | ✅ `kintsugi control watch-main` fetches `origin/main` (a push nobody pulled is seen, and its commit is local for the graph diff); a move whose signal failed is reported again after a restart; on Temporal, a push to origin mid-round reaches the open Incident through the FleetSupervisor and the round is re-verified on the new main; `scripts/w-runtime.sh up` spawns it | `tests/control/test_main_watch.py` (4 tests), `tests/test_scripts.py` |
+| Full suite, one run | ✅ **1038 passed, 30 skipped** in 15 min 39 s | `uv run pytest -q` |
+
+Not proven offline: export of the crew's traces to neatlogs and whether neatlogs sums
+`neatlogs.agent.cost_usd` into the session cost (spike A3; needs this edition's neatlogs project);
+S-18 against the real worker pools of a running W; `make judge` over real bundles (no window has
+run, so `published-bundles/` still holds none and the offline audit stays at exit 2, A-67).
 
 ## Audit-gap closure (2026-10-13): the 13 gaps of the read-only audit
 

@@ -3,7 +3,8 @@
 #
 #   scripts/w-runtime.sh check    prerequisites and the runtime file, nothing started
 #   scripts/w-runtime.sh up       Temporal dev server, Watchdog (crew + Surgeon pools), supervisor,
-#                                 hit forwarder, ingress, poller, fleet; AuditAnchor at T0
+#                                 hit forwarder, main watcher (L4 drift from origin/main), ingress,
+#                                 poller, fleet; AuditAnchor at T0
 #   scripts/w-runtime.sh status   what is running
 #   scripts/w-runtime.sh down     fleet down, then everything else in reverse order
 #
@@ -33,7 +34,7 @@ export UV_PROJECT_ENVIRONMENT="${UV_PROJECT_ENVIRONMENT:-$HOME/.venvs/kintsugi-o
 export ENTIRE_TEST_TTY=0 GIT_TERMINAL_PROMPT=0
 
 # The processes, in start order. `down` stops them in reverse.
-SERVICES=(temporal watchdog forward ingress poller fleet)
+SERVICES=(temporal watchdog forward watch-main ingress poller fleet)
 
 say() { printf '[w-runtime] %s\n' "$*"; }
 die() { say "$*" >&2; exit 1; }
@@ -102,6 +103,10 @@ up() {
   (cd "$REPO" && uv run kintsugi control supervisor --target "$TARGET")
   (cd "$REPO" && uv run python -m kintsugi.crew.runtime start-anchors --target "$TARGET")
   spawn forward uv run kintsugi control forward --target "$TARGET"
+  # L4 (spec §6.4): a 30-second poll of origin/main; each move is signalled as drift into the
+  # FleetSupervisor, which forwards it to every open Incident workflow.
+  spawn watch-main uv run kintsugi control watch-main --target "$TARGET" --remote origin \
+    --interval 30
   spawn ingress uv run kintsugi senses ingress --host 127.0.0.1 --port "$INGRESS_PORT"
   spawn poller uv run kintsugi senses poll
   spawn fleet uv run kintsugi fleet up

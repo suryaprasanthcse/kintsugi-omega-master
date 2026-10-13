@@ -195,10 +195,9 @@ def compose(
     schedule: dict[str, Any] = {"not_before": not_before, "jitter_s": jitter_s}
     if duration_s is not None:
         schedule["duration_s"] = duration_s
-    delivery: dict[str, Any] = {
-        "mode": "claude_code_session" if cls.startswith(PATCH_CLASSES) else "chaos_proxy",
-        "framing": framing,
-    }
+    mode = ("claude_code_session" if cls.startswith(PATCH_CLASSES)
+            else "chaos_api" if cls.startswith("healer.") else "chaos_proxy")  # fmt: skip
+    delivery: dict[str, Any] = {"mode": mode, "framing": framing}
     if patch is not None:
         delivery["patch_sha256"] = patch_sha256(patch)
     return {

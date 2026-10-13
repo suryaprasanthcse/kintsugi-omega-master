@@ -201,6 +201,16 @@ class CaseFile:
     def add_cost(self, role: str, usd: float, what: str) -> None:
         self._append("costs.jsonl", {"role": role, "usd": round(float(usd), 6), "what": what})
 
+    def cost_lines(self) -> list[dict[str, Any]]:
+        """Every complete spend line in order (the crew telemetry reports each on a trace once).
+        A line another process is still writing is left for the next reader."""
+        path = self.root / "costs.jsonl"
+        if not path.is_file():
+            return []
+        text = path.read_text(encoding="utf-8")
+        complete = text[: text.rfind("\n") + 1]
+        return [json.loads(line) for line in complete.splitlines() if line.strip()]
+
     def spent(self) -> float:
         return round(sum(float(r["usd"]) for r in self._read_log("costs.jsonl")), 6)
 

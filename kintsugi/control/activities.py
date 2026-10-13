@@ -202,6 +202,9 @@ _TABLE: tuple[ActivitySpec, ...] = (
                  lambda spec_id: (spec_id, "deliver")),
     ActivitySpec("anchor_ledger", 5 * M, None, 5, (), CREW,
                  lambda hour: (hour, "anchor")),
+    # §7.4: the incident's proof bundle, once per close (a canary re-entry closes later).
+    ActivitySpec("emit_bundle", 5 * M, None, 3, (), CREW,
+                 lambda closing: (closing["incident"], closing.get("pass", 0), "bundle")),
 )  # fmt: skip
 SPECS: Mapping[str, ActivitySpec] = {spec.name: spec for spec in _TABLE}
 
@@ -512,6 +515,10 @@ class OmegaActivities:
     @activity.defn(name="anchor_ledger")
     async def anchor_ledger(self, hour: int) -> str:
         return await self._run("anchor_ledger", str, hour)
+
+    @activity.defn(name="emit_bundle")
+    async def emit_bundle(self, closing: dict[str, Any]) -> c.BundleRef:
+        return await self._run("emit_bundle", c.BundleRef, closing)
 
     def activities_for(self, queue: str) -> list[Callable[..., Any]]:
         return [getattr(self, name) for name, spec in SPECS.items() if spec.task_queue == queue]

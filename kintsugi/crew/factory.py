@@ -1,6 +1,6 @@
 """The real crew behind the control plane's activities (Stage 5's ``Crew`` port).
 
-``OmegaCrew.handle`` dispatches each of the control plane's 38 activities to its handler
+``OmegaCrew.handle`` dispatches each of the control plane's 39 activities to its handler
 (``do_<activity>``; ``tests/crew/test_crew_handlers.py`` checks none is missing):
 
 - **Diagnosis**: Sentinel (``route_hit``), Pathologist (``triage``, ``reproduce``), Archivist
@@ -16,8 +16,11 @@
   ``ledger_append``) append to the hash-chained ledger: a ``FileLedger`` in rehearsals, the
   ``BranchLedger`` on ``refs/heads/ledger`` in W; ``anchor_ledger`` signs hourly anchors;
   ``seal_sabotage`` and ``deliver_sabotage`` run the ``SabotageLane`` (patches through the
-  upstream lane, environment classes through the chaos overlay).
+  upstream lane, environment classes through the chaos overlay, ``healer.*`` classes through
+  the Watchdog's chaos API); ``emit_bundle`` writes ``evidence/<INC>/bundle.json`` (§7.4).
 - **Onboarding** (Stage 10): ``onboard_step`` runs O1–O7 on the ``OnboardingDesk``.
+- **Senses of its own** (§4.1.2): with a ``CrewTelemetry``, every step is a ``kintsugi:<role>``
+  trace, rooted in ``incident:<INC>`` with session ``inc-<INC>`` when it serves an incident.
 
 Workers load it through ``kintsugi.crew.runtime`` (configured per deployment or rehearsal).
 """
@@ -37,6 +40,7 @@ from kintsugi.control import contracts as c
 from kintsugi.control.activities import DeliveryRefused, StepContext
 from kintsugi.control.revert import Reverter, RevertRecord
 from kintsugi.control.surgeon_step import AttemptLog, SessionRunner, SurgeonStep
+from kintsugi.crew import bundler
 from kintsugi.crew.archivist import Archivist
 from kintsugi.crew.auditor import Auditor
 from kintsugi.crew.context import CrewContext
@@ -46,6 +50,7 @@ from kintsugi.crew.notary import Notary, NotaryRequest
 from kintsugi.crew.pathologist import Pathologist
 from kintsugi.crew.saboteur import SabotageRefused, Saboteur
 from kintsugi.crew.sentinel import Sentinel
+from kintsugi.crew.telemetry import CrewTelemetry, incident_of
 from kintsugi.crew.treatment import Treater
 from kintsugi.econ.cortex import Cortex
 from kintsugi.gates import canary
@@ -117,7 +122,8 @@ class SabotageLane:
     ``deliver(request, host)`` runs the delivery notary in a worktree of the host and ships it
     through the upstream lane, returning a reference. ``chaos(spec)`` delivers an environment
     class (``env.*``, Arena requests included) as chaos-proxy overlay rules
-    (``kintsugi.sandbox.chaos_overlay``), returning a reference."""
+    (``kintsugi.sandbox.chaos_overlay``), returning a reference. ``healer(spec)`` delivers a
+    ``healer.*`` class through the Watchdog's chaos API (``kintsugi.crew.healer``)."""
 
     saboteur: Saboteur
     identity: str
@@ -125,6 +131,7 @@ class SabotageLane:
     plans: Mapping[str, tuple[dict[str, Any], str | None]] = field(default_factory=dict)
     publish: Callable[[NotaryRequest], str] | None = None
     chaos: Callable[[Mapping[str, Any]], str] | None = None
+    healer: Callable[[Mapping[str, Any]], str] | None = None  # healer.* → the chaos API (§6.6)
 
 
 class Shipper:
@@ -173,8 +180,12 @@ class OmegaCrew:
         treater: Treater | None = None,  # Stage 9: applies an L5 treatment the governor chose
         onboarding: OnboardingDesk | None = None,  # Stage 10: O1–O7 for registered hosts
         feedback: TraceFeedback | None = None,  # §4.2 write-back: culprit span, verdict
+        telemetry: CrewTelemetry | None = None,  # §4.1.2: kintsugi:<role> traces per step
+        evidence_root: Path | None = None,  # §7.4 bundles; default <state>/evidence
     ) -> None:
         self.ctx = ctx
+        self.telemetry = telemetry
+        self.evidence_root = evidence_root or ctx.state / "evidence"
         self.treater = treater
         self.onboarding = onboarding
         self.feedback = feedback
@@ -197,7 +208,15 @@ class OmegaCrew:
         handler = getattr(self, f"do_{ctx.name}", None)
         if handler is None:
             raise NotImplementedError(f"the crew has no {ctx.name} step")
-        return handler(ctx, *args)
+        if self.telemetry is None:
+            return handler(ctx, *args)
+        incident = incident_of(ctx.name, args)
+
+        def lines(inc: str) -> list[dict[str, Any]]:
+            return self.ctx.case(inc).cost_lines()
+
+        with self.telemetry.step(ctx.name, incident, attempt=ctx.attempt, cost_lines=lines):
+            return handler(ctx, *args)
 
     # ---- senses and diagnosis ------------------------------------------------------------------
 
@@ -513,6 +532,8 @@ class OmegaCrew:
                                str(spec["target"]["host"]))  # fmt: skip
         elif mode == "chaos_proxy" and lane.chaos is not None:
             ref = lane.chaos(spec)
+        elif mode == "chaos_api" and lane.healer is not None:
+            ref = lane.healer(spec)
         else:
             raise DeliveryRefused(f"{spec_id}: no delivery port for {spec['class']} ({mode})")
         self.ledger.append({"type": "sabotage", "event": "delivered", "sabotage": spec_id,
@@ -537,6 +558,39 @@ class OmegaCrew:
         if self.anchoring.remote is not None:  # a rejected push fails the step: a rewrite
             self.ledger.push(self.anchoring.remote)
         return anchor.tag
+
+    def do_emit_bundle(self, step: StepContext, closing: dict[str, Any]) -> c.BundleRef:
+        """§7.4: ``<evidence>/<INC>/bundle.json`` (E.3) with its attachments, at the close."""
+        incident = str(closing["incident"])
+        journal = self.telemetry.journal_path(incident) if self.telemetry is not None else None
+        path, digest = bundler.emit(self.evidence_root, self.ctx.case(incident), closing,
+                                    ledger_entries=self.ledger.entries(), journal_path=journal,
+                                    canary=self._canary_section(closing))  # fmt: skip
+        return c.BundleRef(incident, path.as_posix(), digest)
+
+    def _canary_section(self, closing: Mapping[str, Any]) -> dict[str, Any] | None:
+        """E.3's canary: H0 and H1, the decision and n, and the SPRT path recomputed from the
+        recorded batches (the workflow's own numbers when no batch was recorded here)."""
+        result = closing.get("canary")
+        shipment = closing.get("shipment")
+        if not result or not shipment:
+            return None
+        decision = "reject" if result.get("rejected") else "accept"
+        section: dict[str, Any] = {"decision": decision, "n": int(result.get("n") or 0),
+                                   "llr": round(float(result.get("llr") or 0.0), 4)}  # fmt: skip
+        try:
+            ship = c.Shipment(**shipment)
+            host = self._shipment_host(ship)
+            baseline = canary.baseline_p0(host, baselines=self.ctx.baselines)
+            sprt = canary.sprt_for(baseline)
+            section.update({"p0": baseline.p0, "p1": sprt.p1, "p0_source": baseline.source})
+            batches = [[r["verdict"] != "PASS" for r in b["runs"]]
+                       for b in canary.records(self.canary_record(ship))]  # fmt: skip
+            if batches:
+                section["path"] = [round(x, 4) for x in canary.decide(sprt, batches).path]
+        except (KeyError, TypeError, ValueError, OSError):  # the workflow's numbers stand
+            pass
+        return section
 
     # ---- Stage 7: antibodies (§5.8), vaccination (§6.5 steps 12–14), L3 (§6.7) -----------------
 

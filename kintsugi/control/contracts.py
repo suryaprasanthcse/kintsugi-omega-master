@@ -215,6 +215,16 @@ class Outcome:
 
 
 @dataclass(frozen=True)
+class BundleRef:
+    """Where an incident's proof bundle was written and its digest (§7.4; the ledger's
+    ``bundle_sha256``, E.2)."""
+
+    incident_id: str
+    path: str
+    sha256: str
+
+
+@dataclass(frozen=True)
 class VaccinationResult:
     antibody_id: str
     host: str

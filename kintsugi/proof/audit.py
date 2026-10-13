@@ -172,7 +172,9 @@ def c1_ledger(
         seen_tags.add(anchor.tag)
     if entries and not anchors:
         problems.append("no anchor covers the ledger")
-    recorded = {(str(e.get("incident")), str(e.get("bundle"))) for e in entries if e.get("bundle")}
+    # E.2 names the field ``bundle_sha256``; ``bundle`` is the earlier spelling, still accepted.
+    recorded = {(str(e.get("incident")), str(e.get("bundle_sha256") or e.get("bundle")))
+                for e in entries if e.get("bundle_sha256") or e.get("bundle")}  # fmt: skip
     for incident, digest in sorted((bundles or {}).items()):
         if (incident, digest) not in recorded:
             problems.append(f"{incident}: bundle {digest[:19]}… is not the one the ledger records")
@@ -732,6 +734,8 @@ def run_audit(
     entries = load_ledger(repo, window, offline)
     bundle_root = offline if offline is not None else repo / "published-bundles"
     bundles = _bundles(bundle_root)
+    if offline is None:  # online, in the clone: bundles the crew wrote but nobody published yet
+        bundles = {**_bundles(repo / "evidence"), **bundles}
     if selection.incident:
         bundles = {k: v for k, v in bundles.items() if k == selection.incident}
     if "C1" in want:

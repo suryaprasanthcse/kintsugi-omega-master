@@ -20,7 +20,10 @@ What W changes against the rehearsals:
   with it; ``AuditAnchor`` signs ``anchor-YYYYMMDD-HH`` with it hourly and the ledger branch is
   pushed fast-forward after each anchor; the post text goes to ``anchor_out`` for the Architect.
 - **Sabotage lane**: the Saboteur's store and age identity (outside every repository), with the
-  upstream lane (``kintsugi.crew.upstream``) as its ``deliver`` and ``publish`` ports.
+  upstream lane (``kintsugi.crew.upstream``) as its ``deliver`` and ``publish`` ports, the chaos
+  overlay for ``env.*`` and the Watchdog's chaos API (``chaos_url``) for ``healer.*`` (S-18).
+- **Telemetry and evidence**: ``CrewTelemetry`` under ``<state>/telemetry`` (exported with
+  ``NEATLOGS_API_KEY``); each incident's proof bundle in ``<repo>/evidence/<INC>/``.
 
 ``python -m kintsugi.crew.runtime check`` validates a runtime file and prints what is wired (no
 secrets); ``start-anchors`` starts the ``AuditAnchor`` workflow at T0.
@@ -46,10 +49,13 @@ from kintsugi.control.revert import RevertConfig, Reverter
 from kintsugi.control.ship import GhCli, GitHubShipper, LocalShipper, ShipConfig
 from kintsugi.crew.context import CrewContext, LocalTraces, NeatlogsTraces
 from kintsugi.crew.factory import Anchoring, Immunity, OmegaCrew, SabotageLane
+from kintsugi.crew.healer import DEFAULT_URL as DEFAULT_CHAOS_URL
+from kintsugi.crew.healer import HealerPort
 from kintsugi.crew.immunologist import Immunologist
 from kintsugi.crew.notary import Notary
 from kintsugi.crew.saboteur import Saboteur
 from kintsugi.crew.surgeon import ClaudeSurgeon
+from kintsugi.crew.telemetry import CrewTelemetry
 from kintsugi.crew.treatment import Treater
 from kintsugi.crew.upstream import UpstreamConfig, UpstreamLane
 from kintsugi.econ.cortex import PLAN_FILE, Cortex
@@ -94,6 +100,7 @@ class RuntimeConfig:
     neatlogs: bool = False  # failing traces through the Public API (credentials from the env)
     upstream_checks: tuple[str, ...] = ()  # CI checks the upstream lane waits for
     sabotage: SabotageConfig | None = None
+    chaos_url: str = DEFAULT_CHAOS_URL  # the Watchdog's chaos API (healer.* deliveries, §6.6)
 
     @classmethod
     def from_json(cls, data: Mapping[str, Any]) -> RuntimeConfig:
@@ -114,6 +121,7 @@ class RuntimeConfig:
             upstream_checks=tuple(data.get("upstream_checks") or ()),
             sabotage=SabotageConfig(Path(sab["store"]), Path(sab["identity"]),
                                     str(sab["recipient"])) if sab else None,
+            chaos_url=str(data.get("chaos_url") or DEFAULT_CHAOS_URL),
         )  # fmt: skip
 
     @classmethod
@@ -227,10 +235,14 @@ def build(cfg: RuntimeConfig) -> OmegaCrew:
     onboarding = OnboardingDesk(state / "onboarding", AntibodyLibrary(repo / "antibodies"))
     # §4.2 write-back to neatlogs traces (needs NEATLOGS_OAUTH_TOKEN; skipped without it, A-29)
     feedback = TraceFeedback(api_from_env(os.environ)) if cfg.neatlogs else None
+    # §4.1.2: kintsugi:<role> traces, incident:<INC> roots, session inc-<INC> (exported only
+    # with NEATLOGS_API_KEY); §7.4: bundles in the repository's evidence/<INC>/.
+    telemetry = CrewTelemetry.from_env(state / "telemetry", os.environ)
     return OmegaCrew(ctx, runner=lambda: surgeon, shipper=shipper, ledger=ledger,
                      immunity=immunity, anchoring=anchoring, cortex=cortex, treater=treater,
                      sabotage=sabotage_lane(cfg, notary, gh, tuple(targets)),
-                     onboarding=onboarding, feedback=feedback)  # fmt: skip
+                     onboarding=onboarding, feedback=feedback, telemetry=telemetry,
+                     evidence_root=repo / "evidence")  # fmt: skip
 
 
 def sabotage_lane(
@@ -247,8 +259,9 @@ def sabotage_lane(
     lane = UpstreamLane(cfg.repo, notary, github, upstream)
     identity = sab.identity.read_text(encoding="ascii").strip()
     overlay = ChaosOverlay.for_fleet(cfg.state_dir, cfg.repo)  # env.* and Arena requests
+    healer = HealerPort.for_repo(cfg.repo, cfg.chaos_url)  # healer.* (S-18) via the Watchdog
     return SabotageLane(saboteur, identity, deliver=lane.deliver, publish=lane.publish,
-                        chaos=overlay.deliver)  # fmt: skip
+                        chaos=overlay.deliver, healer=healer.deliver)  # fmt: skip
 
 
 def crew() -> OmegaCrew:
@@ -274,6 +287,10 @@ def describe(crew_: OmegaCrew) -> dict[str, Any]:
         "hosts": sorted(crew_.ctx.targets),
         "shipper": type(crew_.shipper).__name__,
         "sabotage_lane": crew_.sabotage is not None,
+        "healer_port": bool(crew_.sabotage and crew_.sabotage.healer),
+        "telemetry": None if crew_.telemetry is None
+        else ("exported" if crew_.telemetry.exporting else "local"),
+        "evidence": crew_.evidence_root.as_posix(),
         "model": "offline" if crew_.ctx.model is None else "claude-cli",
     }  # fmt: skip
 

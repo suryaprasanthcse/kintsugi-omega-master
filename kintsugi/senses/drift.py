@@ -2,7 +2,8 @@
 
 When a host's main moves while a repair is in flight (S-19, "benign upstream drift"):
 
-1. :class:`MainWatcher` sees the new head (a 30-second poll; a GitHub push webhook can call
+1. :class:`MainWatcher` sees the new head (a 30-second poll of ``origin/main`` in W, run by
+   ``kintsugi control watch-main`` from ``scripts/w-runtime.sh``; a GitHub push webhook can call
    :meth:`MainWatcher.poll_once` too) and the control plane signals ``drift(repo, new_main)``
    into the FleetSupervisor, which forwards it to every open incident.
 2. :func:`reverify_plan` decides what must be re-checked for a candidate fix:
@@ -40,7 +41,13 @@ class Drift:
 
 
 class MainWatcher:
-    """Polls each repository's branch head; reports every change once (state persisted)."""
+    """Polls each repository's branch head; reports every change once (state persisted).
+
+    With ``remote`` set (W: ``origin``), each poll fetches ``<remote>/<branch>`` first and reads
+    that ref, so a change pushed to GitHub is seen even though nobody pulls the checkout, and the
+    new head exists locally for the L4 graph diff. A head is recorded only after ``on_drift``
+    returned: a signal that failed is reported again on the next poll, never lost.
+    """
 
     def __init__(
         self,
@@ -49,33 +56,46 @@ class MainWatcher:
         *,
         branch: str = "main",
         state_path: Path | None = None,
+        remote: str | None = None,
     ) -> None:
         self.repos = {name: Path(path) for name, path in repos.items()}
         self.on_drift = on_drift
         self.branch = branch
+        self.remote = remote
         self.state_path = state_path
         self.seen: dict[str, str] = {}
         if state_path is not None and state_path.is_file():
             self.seen = dict(json.loads(state_path.read_text(encoding="utf-8")))
 
+    @property
+    def ref(self) -> str:
+        return f"{self.remote}/{self.branch}" if self.remote else self.branch
+
     def head(self, repo: Path) -> str:
-        result = proc.run(["git", "-C", str(repo), "rev-parse", "--verify", self.branch],
+        if self.remote:
+            proc.run(["git", "-C", str(repo), "fetch", "--quiet", "--no-tags", self.remote,
+                      f"+refs/heads/{self.branch}:refs/remotes/{self.ref}"],
+                     timeout_s=120, check=True)  # fmt: skip
+        result = proc.run(["git", "-C", str(repo), "rev-parse", "--verify", self.ref],
                           timeout_s=30, check=True)  # fmt: skip
         return result.stdout.strip()
 
     def poll_once(self) -> list[Drift]:
         drifts = []
-        for name, path in sorted(self.repos.items()):
-            head = self.head(path)
-            previous = self.seen.get(name)
-            self.seen[name] = head
-            if previous is not None and previous != head:
-                drift = Drift(name, previous, head)
-                self.on_drift(drift)
-                drifts.append(drift)
-        if self.state_path is not None:
-            self.state_path.parent.mkdir(parents=True, exist_ok=True)
-            self.state_path.write_text(json.dumps(self.seen, sort_keys=True), encoding="utf-8")
+        try:
+            for name, path in sorted(self.repos.items()):
+                head = self.head(path)
+                previous = self.seen.get(name)
+                if previous is not None and previous != head:
+                    drift = Drift(name, previous, head)
+                    self.on_drift(drift)
+                    drifts.append(drift)
+                self.seen[name] = head
+        finally:
+            if self.state_path is not None:
+                self.state_path.parent.mkdir(parents=True, exist_ok=True)
+                self.state_path.write_text(json.dumps(self.seen, sort_keys=True),
+                                           encoding="utf-8")  # fmt: skip
         return drifts
 
     def run(self, stop: threading.Event, *, interval_s: float = 30.0) -> None:

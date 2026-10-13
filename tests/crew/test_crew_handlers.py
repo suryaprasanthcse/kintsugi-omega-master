@@ -21,7 +21,7 @@ FORM = (REPO / "tests" / "fixtures" / "rehearsal" / "oss1" / "intake.md").read_t
 def test_all_declared_activities_have_a_handler() -> None:
     missing = sorted(name for name in SPECS if not callable(getattr(OmegaCrew, f"do_{name}", None)))
     assert missing == []
-    assert len(SPECS) == 38
+    assert len(SPECS) == 39
 
 
 def test_the_repairs_verdict_is_written_back_to_the_failing_traces(tmp_path: Path) -> None:

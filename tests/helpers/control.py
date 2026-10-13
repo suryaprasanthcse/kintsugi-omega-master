@@ -133,6 +133,9 @@ def crew_for(s: Scenario) -> ScriptedCrew:
         "seal_sabotage": lambda spec: f"commitment-{spec}",
         "deliver_sabotage": lambda spec: None,
         "anchor_ledger": lambda hour: f"anchor-{hour}",
+        "emit_bundle": lambda closing: c.BundleRef(closing["incident"],
+                                                   f"evidence/{closing['incident']}/bundle.json",
+                                                   f"sha256:bundle-{closing['incident']}"),
     }  # fmt: skip
     return ScriptedCrew(answers)
 
