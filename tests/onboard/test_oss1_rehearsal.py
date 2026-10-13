@@ -101,6 +101,18 @@ def test_the_intake_fixture_has_every_consent_and_is_foreign() -> None:
     assert (rehearsal.PRACTICE / accepted.entry_point).is_file()
 
 
+def test_the_checkout_digest_ignores_tool_caches(tmp_path: Path) -> None:
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg" / "a.py").write_text("x = 1\n", encoding="utf-8")
+    before = rehearsal._tree_sha(tmp_path)
+    for cache in (".ruff_cache", ".pytest_cache", "pkg/__pycache__"):
+        (tmp_path / cache).mkdir(parents=True)
+        (tmp_path / cache / "junk").write_text("cache", encoding="utf-8")
+    assert rehearsal._tree_sha(tmp_path) == before
+    (tmp_path / "pkg" / "a.py").write_text("x = 2\n", encoding="utf-8")
+    assert rehearsal._tree_sha(tmp_path) != before
+
+
 @pytest.fixture(scope="module")
 def summary(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     root = tmp_path_factory.mktemp("oss1")

@@ -71,10 +71,14 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(_text(path)).hexdigest()
 
 
+CACHES = {"__pycache__", ".ruff_cache", ".pytest_cache", ".mypy_cache", ".onboard-verdicts.json"}
+
+
 def _tree_sha(folder: Path) -> str:
+    """The source tree's digest; tool caches other runs leave behind (ruff, pytest) excluded."""
     digest = hashlib.sha256()
-    for path in sorted(p for p in folder.rglob("*") if p.is_file()
-                       and "__pycache__" not in p.parts and p.suffix != ".pyc"):  # fmt: skip
+    for path in sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix != ".pyc"
+                       and not CACHES.intersection(p.relative_to(folder).parts)):  # fmt: skip
         digest.update(path.relative_to(folder).as_posix().encode("utf-8") + b"\0")
         digest.update(_text(path))
     return digest.hexdigest()
