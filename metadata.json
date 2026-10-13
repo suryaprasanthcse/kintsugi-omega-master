@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4SWYHP8PSRE6D7Y9R62H28Y",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "arena/board.css",
+    "arena/board.js",
+    "arena/index.html",
+    "kintsugi/arena_api.py",
+    "kintsugi/arena_service.py",
+    "kintsugi/cli.py",
+    "tests/test_arena_service.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 92,
+    "cache_creation_tokens": 88783,
+    "cache_read_tokens": 14016020,
+    "output_tokens": 47354,
+    "api_call_count": 46
+  }
+}
